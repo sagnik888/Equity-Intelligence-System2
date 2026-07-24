@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Indian Equity Intelligence System"
+version = "1.0.0"
+id = "artifacts/ieis-dashboard"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19391
+
+[services.development]
+run = "pnpm --filter @workspace/ieis-dashboard run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ieis-dashboard", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/ieis-dashboard/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19391"
+BASE_PATH = "/"

@@ -1,22 +1,43 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Indian Equity Intelligence System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: universe
+    description: Security master and universe management
+  - name: scores
+    description: Candidate scores and component scores
+  - name: rankings
+    description: Multi-dimensional ranking system
+  - name: hardgates
+    description: Hard gate engine (Block/Cap/Penalty)
+  - name: signals
+    description: Daily/Weekly/Monthly/Medium/Long signals
+  - name: portfolio
+    description: Portfolio positions and suitability
+  - name: research
+    description: Deep research scores and evidence ledger
+  - name: watchlists
+    description: Dynamic watchlist management
+  - name: backtest
+    description: Backtest results and performance metrics
+  - name: dashboard
+    description: Dashboard aggregates and summary
+  - name: audit
+    description: Historical audit reconstruction
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +45,1740 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── Universe ───────────────────────────────────────────────────────────────
+  /universe:
+    get:
+      operationId: listSecurities
+      tags: [universe]
+      summary: List securities in the universe
+      parameters:
+        - name: group
+          in: query
+          schema:
+            type: string
+            enum: [large_cap, mid_cap, small_cap, micro_cap, sme, reit_invit, all]
+          description: Universe group filter
+        - name: sector
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, suspended, delisted, all]
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: search
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of securities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecurityList"
+
+  /universe/{isin}:
+    get:
+      operationId: getSecurity
+      tags: [universe]
+      summary: Get security detail
+      parameters:
+        - name: isin
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Security detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecurityDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /universe/stats:
+    get:
+      operationId: getUniverseStats
+      tags: [universe]
+      summary: Universe statistics summary
+      responses:
+        "200":
+          description: Universe statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UniverseStats"
+
+  # ─── Scores ─────────────────────────────────────────────────────────────────
+  /scores:
+    get:
+      operationId: listCandidateScores
+      tags: [scores]
+      summary: List candidate scores with filters
+      parameters:
+        - name: sector
+          in: query
+          schema: { type: string }
+        - name: group
+          in: query
+          schema: { type: string }
+        - name: minScore
+          in: query
+          schema: { type: number }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [candidate_score, quality_score, growth_score, value_score, data_confidence]
+      responses:
+        "200":
+          description: List of candidate scores
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CandidateScoreList"
+
+  /scores/{isin}:
+    get:
+      operationId: getStockScore
+      tags: [scores]
+      summary: Full score breakdown for a stock
+      parameters:
+        - name: isin
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Score breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockScoreDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /scores/distribution:
+    get:
+      operationId: getScoreDistribution
+      tags: [scores]
+      summary: Score distribution across universe
+      responses:
+        "200":
+          description: Score distribution buckets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreDistribution"
+
+  # ─── Rankings ────────────────────────────────────────────────────────────────
+  /rankings:
+    get:
+      operationId: listRankings
+      tags: [rankings]
+      summary: Multi-dimensional rankings
+      parameters:
+        - name: dimension
+          in: query
+          schema:
+            type: string
+            enum: [overall, sector, market_cap, quality, growth, value, balance_sheet, capital_allocation, integrity, momentum, liquidity, data_confidence, research, upgrade, downgrade, persistence, capacity]
+          description: Ranking dimension
+        - name: sector
+          in: query
+          schema: { type: string }
+        - name: group
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        "200":
+          description: Rankings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RankingList"
+
+  /rankings/{isin}:
+    get:
+      operationId: getStockRankings
+      tags: [rankings]
+      summary: All ranking dimensions for a stock
+      parameters:
+        - name: isin
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Stock rankings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockRankings"
+
+  # ─── Hard Gates ──────────────────────────────────────────────────────────────
+  /hardgates:
+    get:
+      operationId: listHardGates
+      tags: [hardgates]
+      summary: List active hard gate flags
+      parameters:
+        - name: level
+          in: query
+          schema:
+            type: string
+            enum: [level1, level2, level3, all]
+        - name: sector
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 100 }
+      responses:
+        "200":
+          description: Hard gate list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HardGateList"
+
+  /hardgates/{isin}:
+    get:
+      operationId: getStockHardGates
+      tags: [hardgates]
+      summary: Hard gate status for a stock
+      parameters:
+        - name: isin
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Hard gate detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockHardGateDetail"
+
+  /hardgates/summary:
+    get:
+      operationId: getHardGateSummary
+      tags: [hardgates]
+      summary: Hard gate summary counts by level and trigger
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HardGateSummary"
+
+  # ─── Signals ─────────────────────────────────────────────────────────────────
+  /signals:
+    get:
+      operationId: listSignals
+      tags: [signals]
+      summary: List signals with filtering
+      parameters:
+        - name: horizon
+          in: query
+          schema:
+            type: string
+            enum: [daily, weekly, monthly, medium, long, all]
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [strong_buy, buy, hold, sell, avoid, pending_review]
+        - name: sector
+          in: query
+          schema: { type: string }
+        - name: group
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: Signal list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignalList"
+
+  /signals/{isin}:
+    get:
+      operationId: getStockSignals
+      tags: [signals]
+      summary: All horizon signals for a stock
+      parameters:
+        - name: isin
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Stock signals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockSignals"
+
+  /signals/state-summary:
+    get:
+      operationId: getSignalStateSummary
+      tags: [signals]
+      summary: Count of signals by state and horizon
+      responses:
+        "200":
+          description: Signal state summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignalStateSummary"
+
+  /signals/top-buys:
+    get:
+      operationId: getTopBuySignals
+      tags: [signals]
+      summary: Top strong buy and buy signals across all horizons
+      parameters:
+        - name: horizon
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Top buy signals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignalList"
+
+  # ─── Portfolio ────────────────────────────────────────────────────────────────
+  /portfolio:
+    get:
+      operationId: listPortfolioPositions
+      tags: [portfolio]
+      summary: List current portfolio positions
+      responses:
+        "200":
+          description: Portfolio positions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioList"
+    post:
+      operationId: addPortfolioPosition
+      tags: [portfolio]
+      summary: Add a position to the portfolio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PositionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioPosition"
+
+  /portfolio/{id}:
+    patch:
+      operationId: updatePortfolioPosition
+      tags: [portfolio]
+      summary: Update a portfolio position
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PositionUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioPosition"
+    delete:
+      operationId: deletePortfolioPosition
+      tags: [portfolio]
+      summary: Remove a position
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  /portfolio/summary:
+    get:
+      operationId: getPortfolioSummary
+      tags: [portfolio]
+      summary: Portfolio summary with P&L and risk metrics
+      responses:
+        "200":
+          description: Portfolio summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioSummary"
+
+  /portfolio/suitability:
+    get:
+      operationId: listSuitabilityScores
+      tags: [portfolio]
+      summary: Position suitability scores for watchlist candidates
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        "200":
+          description: Suitability scores
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuitabilityList"
+
+  /portfolio/size:
+    post:
+      operationId: calculatePositionSize
+      tags: [portfolio]
+      summary: Calculate risk-constrained position size
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PositionSizeInput"
+      responses:
+        "200":
+          description: Position size calculation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PositionSizeResult"
+
+  # ─── Research ─────────────────────────────────────────────────────────────────
+  /research:
+    get:
+      operationId: listResearchScores
+      tags: [research]
+      summary: List deep research scores
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: minScore
+          in: query
+          schema: { type: number }
+      responses:
+        "200":
+          description: Research scores
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResearchScoreList"
+
+  /research/{isin}:
+    get:
+      operationId: getResearchDetail
+      tags: [research]
+      summary: Deep research detail for a stock
+      parameters:
+        - name: isin
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Research detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResearchDetail"
+
+  /research/{isin}/evidence:
+    get:
+      operationId: getEvidenceLedger
+      tags: [research]
+      summary: Evidence ledger entries for a stock
+      parameters:
+        - name: isin
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Evidence entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvidenceLedger"
+
+  # ─── Watchlists ───────────────────────────────────────────────────────────────
+  /watchlists:
+    get:
+      operationId: listWatchlists
+      tags: [watchlists]
+      summary: List all dynamic watchlists with counts
+      responses:
+        "200":
+          description: Watchlist summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WatchlistSummary"
+
+  /watchlists/{name}:
+    get:
+      operationId: getWatchlist
+      tags: [watchlists]
+      summary: Get securities in a specific watchlist
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [elite_candidates, quality_at_reasonable_value, emerging_compounders, earnings_improvers, cashflow_improvers, turnaround_watch, deep_value, value_traps, governance_deterioration, balance_sheet_risk, overvaluation, momentum_confirmation, liquidity_deterioration, new_listings, pending_resolution, insufficient_data, recent_upgrades, recent_downgrades, upcoming_results, portfolio_review_required]
+      responses:
+        "200":
+          description: Watchlist securities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WatchlistDetail"
+
+  # ─── Backtest ─────────────────────────────────────────────────────────────────
+  /backtest/results:
+    get:
+      operationId: listBacktestResults
+      tags: [backtest]
+      summary: List backtest run results
+      responses:
+        "200":
+          description: Backtest results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BacktestResultList"
+
+  /backtest/results/{id}:
+    get:
+      operationId: getBacktestResult
+      tags: [backtest]
+      summary: Full backtest result detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Backtest result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BacktestResult"
+
+  /backtest/factor-analysis:
+    get:
+      operationId: getFactorAnalysis
+      tags: [backtest]
+      summary: Factor IC, decile spreads, and redundancy metrics
+      responses:
+        "200":
+          description: Factor analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactorAnalysis"
+
+  # ─── Dashboard ────────────────────────────────────────────────────────────────
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Main dashboard summary with key metrics
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/alerts:
+    get:
+      operationId: getDashboardAlerts
+      tags: [dashboard]
+      summary: Active alerts requiring attention
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Alerts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertList"
+
+  /dashboard/sector-breakdown:
+    get:
+      operationId: getSectorBreakdown
+      tags: [dashboard]
+      summary: Score and signal distribution by sector
+      responses:
+        "200":
+          description: Sector breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SectorBreakdown"
+
+  /dashboard/recent-changes:
+    get:
+      operationId: getRecentChanges
+      tags: [dashboard]
+      summary: Recent score and signal changes
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Recent changes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecentChangeList"
+
+  # ─── Audit ────────────────────────────────────────────────────────────────────
+  /audit/{isin}/history/{date}:
+    get:
+      operationId: getAuditHistory
+      tags: [audit]
+      summary: Historical reconstruction for a stock at a given date
+      parameters:
+        - name: isin
+          in: path
+          required: true
+          schema: { type: string }
+        - name: date
+          in: path
+          required: true
+          schema: { type: string }
+          description: Historical date for reconstruction (YYYY-MM-DD)
+      responses:
+        "200":
+          description: Historical audit record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditHistory"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
+        status: { type: string }
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+
+    # ─── Security ──────────────────────────────────────────────────────────────
+    Security:
+      type: object
+      required: [isin, ticker, name, sector, universe_group, status, market_cap_cr, data_confidence]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        sector: { type: string }
+        industry: { type: string }
+        universe_group:
+          type: string
+          enum: [large_cap, mid_cap, small_cap, micro_cap, sme, reit_invit]
         status:
           type: string
-      required:
-        - status
+          enum: [active, suspended, delisted]
+        market_cap_cr: { type: number }
+        current_price: { type: number }
+        listing_date: { type: string, format: date }
+        data_confidence: { type: number }
+        has_hard_gate: { type: boolean }
+        hard_gate_level: { type: ["integer", "null"] }
+        candidate_score: { type: ["number", "null"] }
+        daily_signal: { type: ["string", "null"] }
+        weekly_signal: { type: ["string", "null"] }
+        monthly_signal: { type: ["string", "null"] }
 
+    SecurityList:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Security" }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    SecurityDetail:
+      type: object
+      required: [isin, ticker, name, sector, universe_group, status, market_cap_cr, data_confidence, financials]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        sector: { type: string }
+        industry: { type: string }
+        sub_industry: { type: string }
+        universe_group:
+          type: string
+          enum: [large_cap, mid_cap, small_cap, micro_cap, sme, reit_invit]
+        status:
+          type: string
+          enum: [active, suspended, delisted]
+        market_cap_cr: { type: number }
+        enterprise_value_cr: { type: ["number", "null"] }
+        current_price: { type: number }
+        face_value: { type: ["number", "null"] }
+        shares_outstanding_cr: { type: ["number", "null"] }
+        promoter_holding_pct: { type: ["number", "null"] }
+        fii_holding_pct: { type: ["number", "null"] }
+        dii_holding_pct: { type: ["number", "null"] }
+        listing_date: { type: string, format: date }
+        data_confidence: { type: number }
+        data_confidence_class:
+          type: string
+          enum: [high, acceptable, restricted, limited, insufficient]
+        financials:
+          $ref: "#/components/schemas/FinancialSnapshot"
+        score_summary:
+          $ref: "#/components/schemas/ScoreSummary"
+
+    FinancialSnapshot:
+      type: object
+      properties:
+        revenue_ttm_cr: { type: ["number", "null"] }
+        ebitda_ttm_cr: { type: ["number", "null"] }
+        pat_ttm_cr: { type: ["number", "null"] }
+        cfo_ttm_cr: { type: ["number", "null"] }
+        fcf_ttm_cr: { type: ["number", "null"] }
+        revenue_growth_3y_pct: { type: ["number", "null"] }
+        eps_growth_3y_pct: { type: ["number", "null"] }
+        roic_pct: { type: ["number", "null"] }
+        roce_pct: { type: ["number", "null"] }
+        roe_pct: { type: ["number", "null"] }
+        ebitda_margin_pct: { type: ["number", "null"] }
+        net_debt_to_ebitda: { type: ["number", "null"] }
+        interest_coverage: { type: ["number", "null"] }
+        pe_ratio: { type: ["number", "null"] }
+        pb_ratio: { type: ["number", "null"] }
+        ev_ebitda: { type: ["number", "null"] }
+        fcf_yield_pct: { type: ["number", "null"] }
+        dividend_yield_pct: { type: ["number", "null"] }
+        median_daily_traded_value_cr: { type: ["number", "null"] }
+
+    ScoreSummary:
+      type: object
+      properties:
+        candidate_score: { type: ["number", "null"] }
+        quality_score: { type: ["number", "null"] }
+        growth_score: { type: ["number", "null"] }
+        value_score: { type: ["number", "null"] }
+        balance_sheet_score: { type: ["number", "null"] }
+        capital_allocation_score: { type: ["number", "null"] }
+        integrity_score: { type: ["number", "null"] }
+
+    UniverseStats:
+      type: object
+      required: [total, active, suspended, delisted, by_group, by_sector, data_confidence_distribution]
+      properties:
+        total: { type: integer }
+        active: { type: integer }
+        suspended: { type: integer }
+        delisted: { type: integer }
+        investable: { type: integer }
+        by_group:
+          type: array
+          items:
+            type: object
+            required: [group, count]
+            properties:
+              group: { type: string }
+              count: { type: integer }
+        by_sector:
+          type: array
+          items:
+            type: object
+            required: [sector, count]
+            properties:
+              sector: { type: string }
+              count: { type: integer }
+        data_confidence_distribution:
+          type: array
+          items:
+            type: object
+            required: [class, count]
+            properties:
+              class: { type: string }
+              count: { type: integer }
+
+    # ─── Scores ────────────────────────────────────────────────────────────────
+    CandidateScore:
+      type: object
+      required: [isin, ticker, name, sector, candidate_score, data_confidence, score_date]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        sector: { type: string }
+        universe_group: { type: string }
+        candidate_score: { type: number }
+        quality_score: { type: ["number", "null"] }
+        growth_score: { type: ["number", "null"] }
+        value_score: { type: ["number", "null"] }
+        balance_sheet_score: { type: ["number", "null"] }
+        capital_allocation_score: { type: ["number", "null"] }
+        integrity_score: { type: ["number", "null"] }
+        data_confidence: { type: number }
+        hard_gate_cap: { type: ["number", "null"] }
+        overall_rank: { type: ["integer", "null"] }
+        score_date: { type: string, format: date }
+
+    CandidateScoreList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CandidateScore" }
+        total: { type: integer }
+
+    StockScoreDetail:
+      type: object
+      required: [isin, ticker, name, candidate_score, components, data_confidence, score_date]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        candidate_score: { type: number }
+        confidence_adjusted_score: { type: ["number", "null"] }
+        hard_gate_cap: { type: ["number", "null"] }
+        components:
+          type: object
+          properties:
+            quality:
+              $ref: "#/components/schemas/ScoreComponent"
+            growth:
+              $ref: "#/components/schemas/ScoreComponent"
+            value:
+              $ref: "#/components/schemas/ScoreComponent"
+            balance_sheet:
+              $ref: "#/components/schemas/ScoreComponent"
+            capital_allocation:
+              $ref: "#/components/schemas/ScoreComponent"
+            integrity:
+              $ref: "#/components/schemas/ScoreComponent"
+        data_confidence: { type: number }
+        data_confidence_breakdown:
+          type: object
+          properties:
+            primary_source_coverage: { type: number }
+            financial_reconciliation: { type: number }
+            data_freshness: { type: number }
+            historical_coverage: { type: number }
+            source_agreement: { type: number }
+            parsing_confidence: { type: number }
+            sector_model_completeness: { type: number }
+            corporate_action_completeness: { type: number }
+        score_date: { type: string, format: date }
+        score_history:
+          type: array
+          items:
+            type: object
+            required: [date, candidate_score]
+            properties:
+              date: { type: string }
+              candidate_score: { type: number }
+
+    ScoreComponent:
+      type: object
+      required: [score, weight, sub_scores]
+      properties:
+        score: { type: ["number", "null"] }
+        weight: { type: number }
+        sub_scores:
+          type: array
+          items:
+            type: object
+            required: [name, value, weight]
+            properties:
+              name: { type: string }
+              value: { type: ["number", "null"] }
+              weight: { type: number }
+              percentile: { type: ["number", "null"] }
+
+    ScoreDistribution:
+      type: object
+      required: [buckets, total]
+      properties:
+        buckets:
+          type: array
+          items:
+            type: object
+            required: [range_label, count]
+            properties:
+              range_label: { type: string }
+              min: { type: number }
+              max: { type: number }
+              count: { type: integer }
+        total: { type: integer }
+        mean: { type: number }
+        median: { type: number }
+        p75: { type: number }
+        p90: { type: number }
+
+    # ─── Rankings ─────────────────────────────────────────────────────────────
+    RankingEntry:
+      type: object
+      required: [isin, ticker, name, sector, rank, score, percentile]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        sector: { type: string }
+        universe_group: { type: string }
+        rank: { type: integer }
+        score: { type: number }
+        percentile: { type: number }
+        rank_change: { type: ["integer", "null"] }
+        dimension: { type: string }
+
+    RankingList:
+      type: object
+      required: [items, dimension, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RankingEntry" }
+        dimension: { type: string }
+        total: { type: integer }
+
+    StockRankings:
+      type: object
+      required: [isin, ticker, name, ranks]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        ranks:
+          type: object
+          properties:
+            overall: { type: ["integer", "null"] }
+            sector: { type: ["integer", "null"] }
+            market_cap: { type: ["integer", "null"] }
+            quality: { type: ["integer", "null"] }
+            growth: { type: ["integer", "null"] }
+            value: { type: ["integer", "null"] }
+            balance_sheet: { type: ["integer", "null"] }
+            capital_allocation: { type: ["integer", "null"] }
+            integrity: { type: ["integer", "null"] }
+            momentum: { type: ["integer", "null"] }
+            liquidity: { type: ["integer", "null"] }
+            data_confidence: { type: ["integer", "null"] }
+            research: { type: ["integer", "null"] }
+            persistence: { type: ["integer", "null"] }
+            capacity: { type: ["integer", "null"] }
+        composite_rank_score: { type: ["number", "null"] }
+
+    # ─── Hard Gates ────────────────────────────────────────────────────────────
+    HardGateFlag:
+      type: object
+      required: [isin, ticker, name, sector, level, trigger, state, flagged_at]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        sector: { type: string }
+        level:
+          type: integer
+          enum: [1, 2, 3]
+        trigger: { type: string }
+        state:
+          type: string
+          enum: [avoid, pending_resolution, not_ranked, capped, penalized]
+        cap_score: { type: ["number", "null"] }
+        penalty_points: { type: ["number", "null"] }
+        description: { type: string }
+        flagged_at: { type: string, format: date }
+        resolved_at: { type: ["string", "null"] }
+
+    HardGateList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/HardGateFlag" }
+        total: { type: integer }
+
+    StockHardGateDetail:
+      type: object
+      required: [isin, ticker, name, has_gate, gates]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        has_gate: { type: boolean }
+        effective_cap: { type: ["number", "null"] }
+        effective_state: { type: ["string", "null"] }
+        gates:
+          type: array
+          items: { $ref: "#/components/schemas/HardGateFlag" }
+
+    HardGateSummary:
+      type: object
+      required: [level1_count, level2_count, level3_count, by_trigger]
+      properties:
+        level1_count: { type: integer }
+        level2_count: { type: integer }
+        level3_count: { type: integer }
+        total_blocked: { type: integer }
+        total_capped: { type: integer }
+        by_trigger:
+          type: array
+          items:
+            type: object
+            required: [trigger, count, level]
+            properties:
+              trigger: { type: string }
+              count: { type: integer }
+              level: { type: integer }
+        by_sector:
+          type: array
+          items:
+            type: object
+            required: [sector, count]
+            properties:
+              sector: { type: string }
+              count: { type: integer }
+
+    # ─── Signals ──────────────────────────────────────────────────────────────
+    Signal:
+      type: object
+      required: [isin, ticker, name, sector, horizon, state, hss, confidence, signal_date]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        sector: { type: string }
+        universe_group: { type: string }
+        horizon:
+          type: string
+          enum: [daily, weekly, monthly, medium, long]
+        state:
+          type: string
+          enum: [strong_buy, buy, hold, sell, avoid, pending_review, no_signal]
+        hss: { type: number }
+        confidence: { type: number }
+        stale_penalty: { type: number }
+        event_penalty: { type: number }
+        risk_penalty: { type: number }
+        hard_gate_cap: { type: ["number", "null"] }
+        alignment_score: { type: ["number", "null"] }
+        signal_date: { type: string, format: date }
+        days_in_state: { type: integer }
+        candidate_score: { type: ["number", "null"] }
+        current_price: { type: ["number", "null"] }
+
+    SignalList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Signal" }
+        total: { type: integer }
+
+    StockSignals:
+      type: object
+      required: [isin, ticker, name, signals, alignment_score]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        alignment_score: { type: ["number", "null"] }
+        cross_horizon_state: { type: ["string", "null"] }
+        signals:
+          type: array
+          items: { $ref: "#/components/schemas/Signal" }
+        signal_history:
+          type: array
+          items:
+            type: object
+            required: [date, horizon, state, hss]
+            properties:
+              date: { type: string }
+              horizon: { type: string }
+              state: { type: string }
+              hss: { type: number }
+
+    SignalStateSummary:
+      type: object
+      required: [by_state, by_horizon]
+      properties:
+        by_state:
+          type: array
+          items:
+            type: object
+            required: [state, count]
+            properties:
+              state: { type: string }
+              count: { type: integer }
+        by_horizon:
+          type: array
+          items:
+            type: object
+            required: [horizon, strong_buy, buy, hold, sell, avoid]
+            properties:
+              horizon: { type: string }
+              strong_buy: { type: integer }
+              buy: { type: integer }
+              hold: { type: integer }
+              sell: { type: integer }
+              avoid: { type: integer }
+              pending_review: { type: integer }
+
+    # ─── Portfolio ────────────────────────────────────────────────────────────
+    PortfolioPosition:
+      type: object
+      required: [id, isin, ticker, name, sector, quantity, entry_price, current_price, horizon, status]
+      properties:
+        id: { type: integer }
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        sector: { type: string }
+        quantity: { type: integer }
+        entry_price: { type: number }
+        current_price: { type: number }
+        stop_price: { type: ["number", "null"] }
+        target_price: { type: ["number", "null"] }
+        horizon:
+          type: string
+          enum: [daily, weekly, monthly, medium, long]
+        status:
+          type: string
+          enum: [open, closed, paper]
+        entry_date: { type: string, format: date }
+        exit_date: { type: ["string", "null"] }
+        unrealized_pnl: { type: number }
+        unrealized_pnl_pct: { type: number }
+        weight_pct: { type: number }
+        current_signal: { type: ["string", "null"] }
+        current_candidate_score: { type: ["number", "null"] }
+        suitability_score: { type: ["number", "null"] }
+
+    PortfolioList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PortfolioPosition" }
+        total: { type: integer }
+
+    PortfolioSummary:
+      type: object
+      required: [total_capital, invested_capital, unrealized_pnl, unrealized_pnl_pct, positions_count]
+      properties:
+        total_capital: { type: number }
+        invested_capital: { type: number }
+        cash: { type: number }
+        unrealized_pnl: { type: number }
+        unrealized_pnl_pct: { type: number }
+        positions_count: { type: integer }
+        sector_concentration:
+          type: array
+          items:
+            type: object
+            required: [sector, weight_pct]
+            properties:
+              sector: { type: string }
+              weight_pct: { type: number }
+        top_winners:
+          type: array
+          items: { $ref: "#/components/schemas/PortfolioPosition" }
+        top_losers:
+          type: array
+          items: { $ref: "#/components/schemas/PortfolioPosition" }
+        review_required:
+          type: array
+          items: { $ref: "#/components/schemas/PortfolioPosition" }
+
+    SuitabilityEntry:
+      type: object
+      required: [isin, ticker, name, sector, suitability_score, expected_return_pct, risk_level]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        sector: { type: string }
+        suitability_score: { type: number }
+        expected_return_pct: { type: number }
+        research_confidence: { type: number }
+        liquidity_factor: { type: number }
+        downside_penalty: { type: number }
+        volatility_penalty: { type: number }
+        correlation_penalty: { type: number }
+        event_penalty: { type: number }
+        risk_level:
+          type: string
+          enum: [low, medium, high, very_high]
+
+    SuitabilityList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SuitabilityEntry" }
+        total: { type: integer }
+
+    PositionInput:
+      type: object
+      required: [isin, quantity, entry_price, horizon]
+      properties:
+        isin: { type: string }
+        quantity: { type: integer }
+        entry_price: { type: number }
+        stop_price: { type: ["number", "null"] }
+        target_price: { type: ["number", "null"] }
+        horizon:
+          type: string
+          enum: [daily, weekly, monthly, medium, long]
+        status:
+          type: string
+          enum: [open, paper]
+          default: paper
+        notes: { type: string }
+
+    PositionUpdate:
+      type: object
+      properties:
+        quantity: { type: integer }
+        stop_price: { type: ["number", "null"] }
+        target_price: { type: ["number", "null"] }
+        status:
+          type: string
+          enum: [open, closed, paper]
+        exit_price: { type: ["number", "null"] }
+        notes: { type: string }
+
+    PositionSizeInput:
+      type: object
+      required: [isin, entry_price, stop_price, portfolio_capital]
+      properties:
+        isin: { type: string }
+        entry_price: { type: number }
+        stop_price: { type: number }
+        portfolio_capital: { type: number }
+        risk_percent_per_unit: { type: number, default: 1.0 }
+        allowed_participation_rate: { type: number, default: 0.1 }
+        max_exit_days: { type: integer, default: 10 }
+        max_company_weight: { type: number, default: 0.1 }
+        max_sector_weight: { type: number, default: 0.25 }
+        estimated_roundtrip_cost_pct: { type: number, default: 0.3 }
+
+    PositionSizeResult:
+      type: object
+      required: [isin, ticker, name, final_quantity, binding_constraint]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        final_quantity: { type: integer }
+        quantity_by_risk: { type: integer }
+        quantity_by_liquidity: { type: integer }
+        quantity_by_company_cap: { type: integer }
+        quantity_by_sector_cap: { type: integer }
+        binding_constraint:
+          type: string
+          enum: [risk, liquidity, company_cap, sector_cap, horizon_cap, event_cap]
+        position_value: { type: number }
+        portfolio_weight_pct: { type: number }
+        risk_amount: { type: number }
+        median_daily_traded_value_cr: { type: ["number", "null"] }
+        estimated_exit_days: { type: ["number", "null"] }
+
+    # ─── Research ─────────────────────────────────────────────────────────────
+    ResearchScore:
+      type: object
+      required: [isin, ticker, name, sector, research_score, confidence, coverage_tier, score_date]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        sector: { type: string }
+        research_score: { type: number }
+        adjusted_research_score: { type: number }
+        confidence: { type: number }
+        coverage_tier:
+          type: string
+          enum: [full, standard, limited, screening_only]
+        business_quality_score: { type: ["number", "null"] }
+        integrity_governance_score: { type: ["number", "null"] }
+        valuation_score: { type: ["number", "null"] }
+        score_date: { type: string, format: date }
+
+    ResearchScoreList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ResearchScore" }
+        total: { type: integer }
+
+    ResearchDetail:
+      type: object
+      required: [isin, ticker, name, research_score, components, score_date]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        sector: { type: string }
+        research_score: { type: number }
+        adjusted_research_score: { type: number }
+        confidence: { type: number }
+        components:
+          type: array
+          items:
+            type: object
+            required: [name, weight, score]
+            properties:
+              name: { type: string }
+              weight: { type: number }
+              score: { type: ["number", "null"] }
+              notes: { type: string }
+        valuation:
+          type: object
+          properties:
+            method: { type: string }
+            fair_value_base: { type: ["number", "null"] }
+            fair_value_bull: { type: ["number", "null"] }
+            fair_value_bear: { type: ["number", "null"] }
+            weighted_fair_value: { type: ["number", "null"] }
+            expected_annual_return_pct: { type: ["number", "null"] }
+            horizon_years: { type: ["number", "null"] }
+            current_price: { type: ["number", "null"] }
+        analyst_notes: { type: string }
+        score_date: { type: string, format: date }
+
+    EvidenceEntry:
+      type: object
+      required: [claim_id, claim, claim_type, source, confidence, review_status]
+      properties:
+        claim_id: { type: string }
+        claim: { type: string }
+        claim_type:
+          type: string
+          enum: [fundamental, technical, qualitative, governance, macro, sector, management, regulatory]
+        source: { type: string }
+        source_grade:
+          type: string
+          enum: [primary, secondary, inferred, ai_inference]
+        document_id: { type: ["string", "null"] }
+        page_or_section: { type: ["string", "null"] }
+        filing_timestamp: { type: ["string", "null"] }
+        supporting_evidence: { type: string }
+        contradictory_evidence: { type: string }
+        analyst_inference: { type: boolean }
+        ai_inference: { type: boolean }
+        confidence: { type: number }
+        review_status:
+          type: string
+          enum: [confirmed, pending, contradicted, stale, superseded]
+        affected_score: { type: ["string", "null"] }
+        created_at: { type: string }
+
+    EvidenceLedger:
+      type: object
+      required: [isin, ticker, entries, total]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        entries:
+          type: array
+          items: { $ref: "#/components/schemas/EvidenceEntry" }
+        total: { type: integer }
+
+    # ─── Watchlists ───────────────────────────────────────────────────────────
+    WatchlistSummaryItem:
+      type: object
+      required: [name, display_name, count, description]
+      properties:
+        name: { type: string }
+        display_name: { type: string }
+        count: { type: integer }
+        description: { type: string }
+        category:
+          type: string
+          enum: [opportunity, risk, monitor, action_required]
+
+    WatchlistSummary:
+      type: object
+      required: [watchlists]
+      properties:
+        watchlists:
+          type: array
+          items: { $ref: "#/components/schemas/WatchlistSummaryItem" }
+
+    WatchlistDetail:
+      type: object
+      required: [name, display_name, items, total]
+      properties:
+        name: { type: string }
+        display_name: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CandidateScore" }
+        total: { type: integer }
+
+    # ─── Backtest ─────────────────────────────────────────────────────────────
+    BacktestResultSummary:
+      type: object
+      required: [id, name, test_type, status, cagr_pct, sharpe_ratio, max_drawdown_pct, created_at]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        test_type:
+          type: string
+          enum: [candidate_score, daily_signal, weekly_signal, monthly_signal, factor, portfolio_optimization]
+        status:
+          type: string
+          enum: [completed, running, failed]
+        period_from: { type: string, format: date }
+        period_to: { type: string, format: date }
+        cagr_pct: { type: number }
+        sharpe_ratio: { type: number }
+        sortino_ratio: { type: ["number", "null"] }
+        max_drawdown_pct: { type: number }
+        hit_rate_pct: { type: ["number", "null"] }
+        rank_ic: { type: ["number", "null"] }
+        created_at: { type: string }
+
+    BacktestResultList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/BacktestResultSummary" }
+        total: { type: integer }
+
+    BacktestResult:
+      type: object
+      required: [id, name, test_type, status, metrics, created_at]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        test_type: { type: string }
+        status: { type: string }
+        period_from: { type: string, format: date }
+        period_to: { type: string, format: date }
+        metrics:
+          $ref: "#/components/schemas/BacktestMetrics"
+        equity_curve:
+          type: array
+          items:
+            type: object
+            required: [date, value]
+            properties:
+              date: { type: string }
+              value: { type: number }
+              benchmark: { type: ["number", "null"] }
+        decile_returns:
+          type: array
+          items:
+            type: object
+            required: [decile, return_pct]
+            properties:
+              decile: { type: integer }
+              return_pct: { type: number }
+        notes: { type: string }
+        created_at: { type: string }
+
+    BacktestMetrics:
+      type: object
+      properties:
+        cagr_pct: { type: number }
+        excess_return_pct: { type: ["number", "null"] }
+        volatility_pct: { type: number }
+        max_drawdown_pct: { type: number }
+        drawdown_duration_days: { type: ["integer", "null"] }
+        sharpe_ratio: { type: number }
+        sortino_ratio: { type: ["number", "null"] }
+        calmar_ratio: { type: ["number", "null"] }
+        information_ratio: { type: ["number", "null"] }
+        hit_rate_pct: { type: ["number", "null"] }
+        upside_capture_pct: { type: ["number", "null"] }
+        downside_capture_pct: { type: ["number", "null"] }
+        rank_ic: { type: ["number", "null"] }
+        rank_ic_stability: { type: ["number", "null"] }
+        decile_spread_pct: { type: ["number", "null"] }
+        decile_monotonicity_pct: { type: ["number", "null"] }
+        turnover_pct: { type: ["number", "null"] }
+        avg_slippage_bps: { type: ["number", "null"] }
+        avg_market_impact_bps: { type: ["number", "null"] }
+        deflated_sharpe: { type: ["number", "null"] }
+        probability_of_overfitting: { type: ["number", "null"] }
+
+    FactorAnalysis:
+      type: object
+      required: [factors]
+      properties:
+        factors:
+          type: array
+          items:
+            type: object
+            required: [factor_name, ic_mean, ic_stability]
+            properties:
+              factor_name: { type: string }
+              ic_mean: { type: number }
+              ic_stability: { type: number }
+              ic_ir: { type: ["number", "null"] }
+              decile_spread_pct: { type: ["number", "null"] }
+              sector_exposure: { type: ["number", "null"] }
+              size_exposure: { type: ["number", "null"] }
+              correlation_with_others:
+                type: array
+                items:
+                  type: object
+                  required: [other_factor, correlation]
+                  properties:
+                    other_factor: { type: string }
+                    correlation: { type: number }
+
+    # ─── Dashboard ────────────────────────────────────────────────────────────
+    DashboardSummary:
+      type: object
+      required: [universe_snapshot, signal_snapshot, portfolio_snapshot, top_candidates, data_quality]
+      properties:
+        universe_snapshot:
+          type: object
+          required: [total_securities, investable, last_updated]
+          properties:
+            total_securities: { type: integer }
+            investable: { type: integer }
+            new_listings_30d: { type: integer }
+            level1_gates: { type: integer }
+            level2_gates: { type: integer }
+            last_updated: { type: string }
+        signal_snapshot:
+          type: object
+          required: [daily_strong_buy, daily_buy, weekly_strong_buy, monthly_strong_buy]
+          properties:
+            daily_strong_buy: { type: integer }
+            daily_buy: { type: integer }
+            weekly_strong_buy: { type: integer }
+            weekly_buy: { type: integer }
+            monthly_strong_buy: { type: integer }
+            monthly_buy: { type: integer }
+            cross_horizon_confirmed: { type: integer }
+        portfolio_snapshot:
+          type: object
+          properties:
+            open_positions: { type: integer }
+            paper_positions: { type: integer }
+            unrealized_pnl_pct: { type: ["number", "null"] }
+            positions_needing_review: { type: integer }
+        top_candidates:
+          type: array
+          items: { $ref: "#/components/schemas/CandidateScore" }
+        data_quality:
+          type: object
+          properties:
+            high_confidence_pct: { type: number }
+            stale_data_count: { type: integer }
+            reconciliation_alerts: { type: integer }
+        system_mode:
+          type: string
+          enum: [alert, paper, manual_broker, controlled_automation]
+        score_date: { type: string, format: date }
+
+    Alert:
+      type: object
+      required: [id, type, severity, title, message, created_at]
+      properties:
+        id: { type: integer }
+        type:
+          type: string
+          enum: [signal_change, gate_triggered, data_stale, portfolio_review, score_change, hard_gate_level1, reconciliation_error, system]
+        severity:
+          type: string
+          enum: [critical, high, medium, low, info]
+        isin: { type: ["string", "null"] }
+        ticker: { type: ["string", "null"] }
+        title: { type: string }
+        message: { type: string }
+        is_read: { type: boolean }
+        created_at: { type: string }
+
+    AlertList:
+      type: object
+      required: [items, total, unread_count]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Alert" }
+        total: { type: integer }
+        unread_count: { type: integer }
+
+    SectorBreakdownItem:
+      type: object
+      required: [sector, count, avg_candidate_score, strong_buy_count, buy_count, level1_gates]
+      properties:
+        sector: { type: string }
+        count: { type: integer }
+        avg_candidate_score: { type: number }
+        strong_buy_count: { type: integer }
+        buy_count: { type: integer }
+        level1_gates: { type: integer }
+        avg_data_confidence: { type: number }
+
+    SectorBreakdown:
+      type: object
+      required: [sectors]
+      properties:
+        sectors:
+          type: array
+          items: { $ref: "#/components/schemas/SectorBreakdownItem" }
+
+    RecentChange:
+      type: object
+      required: [isin, ticker, name, change_type, old_value, new_value, changed_at]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        sector: { type: string }
+        change_type:
+          type: string
+          enum: [signal_upgrade, signal_downgrade, score_improvement, score_deterioration, gate_added, gate_removed, data_confidence_change]
+        horizon: { type: ["string", "null"] }
+        old_value: { type: string }
+        new_value: { type: string }
+        changed_at: { type: string }
+
+    RecentChangeList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RecentChange" }
+        total: { type: integer }
+
+    # ─── Audit ────────────────────────────────────────────────────────────────
+    AuditHistory:
+      type: object
+      required: [isin, ticker, name, as_of_date]
+      properties:
+        isin: { type: string }
+        ticker: { type: string }
+        name: { type: string }
+        as_of_date: { type: string, format: date }
+        universe_status: { type: string }
+        data_confidence: { type: ["number", "null"] }
+        candidate_score: { type: ["number", "null"] }
+        research_score: { type: ["number", "null"] }
+        hard_gates:
+          type: array
+          items: { $ref: "#/components/schemas/HardGateFlag" }
+        signals:
+          type: array
+          items: { $ref: "#/components/schemas/Signal" }
+        position:
+          type: object
+          nullable: true
+          properties:
+            quantity: { type: integer }
+            entry_price: { type: number }
+            horizon: { type: string }
+        model_version: { type: string }
+        formula_version: { type: string }
+        decision_explanation: { type: string }
+        available_filings:
+          type: array
+          items:
+            type: object
+            required: [filing_type, period, source, timestamp]
+            properties:
+              filing_type: { type: string }
+              period: { type: string }
+              source: { type: string }
+              timestamp: { type: string }
+        later_revisions:
+          type: array
+          items:
+            type: object
+            required: [date, change_type, description]
+            properties:
+              date: { type: string }
+              change_type: { type: string }
+              description: { type: string }
