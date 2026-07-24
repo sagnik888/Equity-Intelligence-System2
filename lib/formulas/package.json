@@ -1,0 +1,26 @@
+{
+  "name": "@ieis/formulas",
+  "version": "7.1.2",
+  "description": "Indian Equity Intelligence System - Canonical Formula Implementations (V7.1.2)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "equity",
+    "intelligence",
+    "indian-stocks",
+    "formulas",
+    "scoring",
+    "signals"
+  ],
+  "author": "Manus AI",
+  "license": "MIT"
+}
