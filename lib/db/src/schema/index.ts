@@ -7,3 +7,7 @@ export * from "./research";
 export * from "./watchlists";
 export * from "./backtest";
 export * from "./alerts";
+export * from "./evidence";
+export * from "./audit";
+export * from "./hardgate-alerts";
+export * from "./broker-orders";
