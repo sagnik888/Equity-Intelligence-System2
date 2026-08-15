@@ -16,7 +16,7 @@ const STATE_STYLE: Record<string, string> = {
 };
 
 function AuditResult({ isin, date }: { isin: string; date: string }) {
-  const { data, isLoading, error } = useGetAuditHistory({ isin, date });
+  const { data, isLoading, error } = useGetAuditHistory(isin, date);
 
   if (isLoading) return <div className="mt-6"><Skeleton className="h-64 w-full" /></div>;
   if (error || !data) return (

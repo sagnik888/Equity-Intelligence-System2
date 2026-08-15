@@ -23,7 +23,10 @@ export const signalHorizonEnum = pgEnum("signal_horizon", [
 export const signalStateEnum = pgEnum("signal_state", [
   "strong_buy",
   "buy",
+  "accumulate",
+  "watch",
   "hold",
+  "reduce",
   "sell",
   "avoid",
   "pending_review",

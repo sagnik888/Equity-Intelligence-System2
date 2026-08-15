@@ -29,12 +29,16 @@ function MetricCard({ label, value, color }: { label: string; value: string; col
 }
 
 function BacktestDetail({ id }: { id: number }) {
-  const { data } = useGetBacktestResult({ id });
+  const { data } = useGetBacktestResult(id);
   const [tab, setTab] = useState("equity");
 
   if (!data) return <div className="p-8"><Skeleton className="h-64 w-full" /></div>;
 
   const m = data.metrics;
+  const cagr = m.cagr_pct ?? 0;
+  const sharpe = m.sharpe_ratio ?? 0;
+  const maxDrawdown = m.max_drawdown_pct ?? 0;
+  const volatility = m.volatility_pct ?? 0;
   const curve = (data.equity_curve ?? []) as any[];
   const deciles = (data.decile_returns ?? []) as any[];
 
@@ -42,11 +46,11 @@ function BacktestDetail({ id }: { id: number }) {
     <div>
       {/* Key metrics */}
       <div className="grid grid-cols-4 md:grid-cols-8 gap-3 mb-5">
-        <MetricCard label="CAGR" value={`${m.cagr_pct >= 0 ? "+" : ""}${m.cagr_pct.toFixed(1)}%`} color={m.cagr_pct >= 0 ? "text-emerald-400" : "text-red-400"} />
+        <MetricCard label="CAGR" value={`${cagr >= 0 ? "+" : ""}${cagr.toFixed(1)}%`} color={cagr >= 0 ? "text-emerald-400" : "text-red-400"} />
         <MetricCard label="Excess Return" value={m.excess_return_pct != null ? `${m.excess_return_pct >= 0 ? "+" : ""}${m.excess_return_pct.toFixed(1)}%` : "—"} color={m.excess_return_pct != null && m.excess_return_pct >= 0 ? "text-emerald-400" : "text-red-400"} />
-        <MetricCard label="Sharpe" value={m.sharpe_ratio.toFixed(2)} color={m.sharpe_ratio >= 1.5 ? "text-emerald-400" : m.sharpe_ratio >= 0.8 ? "text-amber-400" : "text-red-400"} />
+        <MetricCard label="Sharpe" value={sharpe.toFixed(2)} color={sharpe >= 1.5 ? "text-emerald-400" : sharpe >= 0.8 ? "text-amber-400" : "text-red-400"} />
         <MetricCard label="Sortino" value={m.sortino_ratio != null ? m.sortino_ratio.toFixed(2) : "—"} />
-        <MetricCard label="Max DD" value={`${m.max_drawdown_pct.toFixed(1)}%`} color="text-red-400" />
+        <MetricCard label="Max DD" value={`${maxDrawdown.toFixed(1)}%`} color="text-red-400" />
         <MetricCard label="Calmar" value={m.calmar_ratio != null ? m.calmar_ratio.toFixed(2) : "—"} />
         <MetricCard label="Hit Rate" value={m.hit_rate_pct != null ? `${m.hit_rate_pct.toFixed(1)}%` : "—"} />
         <MetricCard label="Rank IC" value={m.rank_ic != null ? m.rank_ic.toFixed(4) : "—"} color={m.rank_ic != null && m.rank_ic > 0.03 ? "text-emerald-400" : "text-amber-400"} />
@@ -87,7 +91,7 @@ function BacktestDetail({ id }: { id: number }) {
         <TabsContent value="stats" className="mt-0">
           <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-xs">
             {[
-              { l: "Volatility", v: `${m.volatility_pct.toFixed(1)}%` },
+              { l: "Volatility", v: `${volatility.toFixed(1)}%` },
               { l: "Drawdown Duration", v: m.drawdown_duration_days != null ? `${m.drawdown_duration_days}d` : "—" },
               { l: "Information Ratio", v: m.information_ratio?.toFixed(2) ?? "—" },
               { l: "Upside Capture", v: m.upside_capture_pct != null ? `${m.upside_capture_pct.toFixed(0)}%` : "—" },

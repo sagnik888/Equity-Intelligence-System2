@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListSecurities, useGetUniverseStats } from "@workspace/api-client-react";
+import { useListSecurities, useGetUniverseStats, type ListSecuritiesGroup } from "@workspace/api-client-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,7 @@ export default function Universe() {
   const { data, isLoading } = useListSecurities({
     search: search || undefined,
     sector: sector !== "all" ? sector : undefined,
-    group: group !== "all" ? group : undefined,
+    group: group !== "all" ? group as ListSecuritiesGroup : undefined,
     limit,
     offset: page * limit,
   });

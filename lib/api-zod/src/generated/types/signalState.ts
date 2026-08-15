@@ -12,7 +12,10 @@ export type SignalState = typeof SignalState[keyof typeof SignalState];
 export const SignalState = {
   strong_buy: 'strong_buy',
   buy: 'buy',
+  accumulate: 'accumulate',
+  watch: 'watch',
   hold: 'hold',
+  reduce: 'reduce',
   sell: 'sell',
   avoid: 'avoid',
   pending_review: 'pending_review',

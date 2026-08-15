@@ -12,7 +12,10 @@ export type ListSignalsState = typeof ListSignalsState[keyof typeof ListSignalsS
 export const ListSignalsState = {
   strong_buy: 'strong_buy',
   buy: 'buy',
+  accumulate: 'accumulate',
+  watch: 'watch',
   hold: 'hold',
+  reduce: 'reduce',
   sell: 'sell',
   avoid: 'avoid',
   pending_review: 'pending_review',

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq, sql, desc } from "drizzle-orm";
+import { and, eq, sql, desc, or } from "drizzle-orm";
 import { db, signalsTable, signalHistoryTable } from "@workspace/db";
 import {
   ListSignalsQueryParams,
@@ -76,7 +76,10 @@ router.get("/signals/state-summary", async (_req, res): Promise<void> => {
       horizon: h,
       strong_buy: get("strong_buy"),
       buy: get("buy"),
+      accumulate: get("accumulate"),
+      watch: get("watch"),
       hold: get("hold"),
+      reduce: get("reduce"),
       sell: get("sell"),
       avoid: get("avoid"),
       pending_review: get("pending_review"),
@@ -97,7 +100,11 @@ router.get("/signals/top-buys", async (req, res): Promise<void> => {
   }
   const { horizon, limit } = query.data;
 
-  const conditions = [eq(signalsTable.state, "strong_buy")];
+  const conditions = [or(
+    eq(signalsTable.state, "strong_buy"),
+    eq(signalsTable.state, "buy"),
+    eq(signalsTable.state, "accumulate"),
+  )!];
   if (horizon) conditions.push(eq(signalsTable.horizon, horizon as any));
 
   const items = await db.select().from(signalsTable)
@@ -124,7 +131,8 @@ router.get("/signals/:isin", async (req, res): Promise<void> => {
 
   // Cross-horizon alignment score: weighted average of DirectionValue
   const directionMap: Record<string, number> = {
-    strong_buy: 1.0, buy: 0.5, hold: 0, sell: -0.5, avoid: -1.0, pending_review: 0, no_signal: 0
+    strong_buy: 1.0, buy: 0.75, accumulate: 0.5, watch: 0.2,
+    hold: 0, reduce: -0.5, sell: -0.5, avoid: -1.0, pending_review: 0, no_signal: 0
   };
   const horizonWeights: Record<string, number> = { daily: 0.1, weekly: 0.2, monthly: 0.3, medium: 0.2, long: 0.2 };
   let weightedSum = 0, totalWeight = 0;
@@ -144,7 +152,11 @@ router.get("/signals/:isin", async (req, res): Promise<void> => {
     name,
     alignment_score: alignmentScore,
     cross_horizon_state: alignmentScore !== null
-      ? (alignmentScore > 0.5 ? "strong_buy" : alignmentScore > 0 ? "buy" : alignmentScore < -0.5 ? "avoid" : "hold")
+      ? (alignmentScore >= 0.65 ? "strong_buy"
+        : alignmentScore >= 0.25 ? "buy"
+        : alignmentScore <= -0.65 ? "avoid"
+        : alignmentScore < -0.25 ? "reduce"
+        : alignmentScore > 0 ? "watch" : "hold")
       : null,
     signals: signals.map(mapSignal),
     signal_history: history.map(h => ({

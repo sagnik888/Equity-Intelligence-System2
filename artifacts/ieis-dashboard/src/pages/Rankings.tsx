@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListRankings } from "@workspace/api-client-react";
+import { useListRankings, type ListRankingsDimension } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,7 +18,7 @@ const DIMENSIONS = [
 export default function Rankings() {
   const [dimension, setDimension] = useState("overall");
 
-  const { data, isLoading } = useListRankings({ dimension, limit: 50 });
+  const { data, isLoading } = useListRankings({ dimension: dimension as ListRankingsDimension, limit: 50 });
 
   return (
     <div className="p-6 space-y-5">

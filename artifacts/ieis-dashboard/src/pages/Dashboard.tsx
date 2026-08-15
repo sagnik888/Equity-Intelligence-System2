@@ -71,7 +71,9 @@ export default function Dashboard() {
   const changes = changesData?.items ?? [];
   const sectors = sectorData?.sectors?.slice(0, 8) ?? [];
 
-  const totalSignals = (s?.signal_snapshot.daily_strong_buy ?? 0) + (s?.signal_snapshot.daily_buy ?? 0);
+  const totalSignals = (s?.signal_snapshot.daily_strong_buy ?? 0)
+    + (s?.signal_snapshot.daily_buy ?? 0)
+    + (s?.signal_snapshot.daily_accumulate ?? 0);
 
   return (
     <div className="p-6 space-y-6">
@@ -92,7 +94,7 @@ export default function Dashboard() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Universe" value={s?.universe_snapshot.total_securities ?? "—"} sub={`${s?.universe_snapshot.investable ?? 0} investable`} icon={Globe2} color="text-blue-400" />
-        <StatCard label="Buy Signals (Daily)" value={totalSignals} sub={`${s?.signal_snapshot.daily_strong_buy ?? 0} strong buy`} icon={Zap} color="text-emerald-400" />
+        <StatCard label="Buy Signals (Daily)" value={totalSignals} sub={`${s?.signal_snapshot.daily_strong_buy ?? 0} strong buy · ${s?.signal_snapshot.daily_accumulate ?? 0} accumulate`} icon={Zap} color="text-emerald-400" />
         <StatCard label="Hard Gates Active" value={(s?.universe_snapshot.level1_gates ?? 0) + (s?.universe_snapshot.level2_gates ?? 0)} sub={`${s?.universe_snapshot.level1_gates ?? 0} blocked · ${s?.universe_snapshot.level2_gates ?? 0} capped`} icon={ShieldAlert} color="text-red-400" />
         <StatCard label="Data Confidence" value={`${(s?.data_quality.high_confidence_pct ?? 0).toFixed(1)}%`} sub={`${s?.data_quality.stale_data_count ?? 0} stale`} icon={BarChart3} color="text-amber-400" />
       </div>

@@ -47,11 +47,11 @@ export default function StockDetail() {
   const [, params] = useRoute("/universe/:isin");
   const isin = params?.isin ?? "";
 
-  const { data: security, isLoading: secLoading } = useGetSecurity({ isin });
-  const { data: score } = useGetStockScore({ isin });
-  const { data: signals } = useGetStockSignals({ isin });
-  const { data: research } = useGetResearchDetail({ isin });
-  const { data: gates } = useGetStockHardGates({ isin });
+  const { data: security, isLoading: secLoading } = useGetSecurity(isin);
+  const { data: score } = useGetStockScore(isin);
+  const { data: signals } = useGetStockSignals(isin);
+  const { data: research } = useGetResearchDetail(isin);
+  const { data: gates } = useGetStockHardGates(isin);
 
   if (secLoading) {
     return (
@@ -160,12 +160,12 @@ export default function StockDetail() {
               </div>
               {score ? (
                 <>
-                  <ScoreComponent name="Quality" score={score.components.quality.score} weight={score.components.quality.weight} />
-                  <ScoreComponent name="Growth" score={score.components.growth.score} weight={score.components.growth.weight} />
-                  <ScoreComponent name="Value" score={score.components.value.score} weight={score.components.value.weight} />
-                  <ScoreComponent name="Balance Sheet" score={score.components.balance_sheet.score} weight={score.components.balance_sheet.weight} />
-                  <ScoreComponent name="Capital Allocation" score={score.components.capital_allocation.score} weight={score.components.capital_allocation.weight} />
-                  <ScoreComponent name="Integrity" score={score.components.integrity.score} weight={score.components.integrity.weight} />
+                  <ScoreComponent name="Quality" score={score.components.quality?.score} weight={score.components.quality?.weight ?? 0} />
+                  <ScoreComponent name="Growth" score={score.components.growth?.score} weight={score.components.growth?.weight ?? 0} />
+                  <ScoreComponent name="Value" score={score.components.value?.score} weight={score.components.value?.weight ?? 0} />
+                  <ScoreComponent name="Balance Sheet" score={score.components.balance_sheet?.score} weight={score.components.balance_sheet?.weight ?? 0} />
+                  <ScoreComponent name="Capital Allocation" score={score.components.capital_allocation?.score} weight={score.components.capital_allocation?.weight ?? 0} />
+                  <ScoreComponent name="Integrity" score={score.components.integrity?.score} weight={score.components.integrity?.weight ?? 0} />
                 </>
               ) : (
                 <p className="text-xs text-muted-foreground">No score data available.</p>

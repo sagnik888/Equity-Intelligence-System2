@@ -40,8 +40,8 @@ function ScoreBar({ label, weight, score }: { label: string; weight: number; sco
 
 function ResearchDetail({ isin }: { isin: string }) {
   const [tab, setTab] = useState("scores");
-  const { data: detail } = useGetResearchDetail({ isin });
-  const { data: evidence } = useGetEvidenceLedger({ isin });
+  const { data: detail } = useGetResearchDetail(isin);
+  const { data: evidence } = useGetEvidenceLedger(isin);
 
   if (!detail) return <div className="p-4"><Skeleton className="h-48 w-full" /></div>;
 
@@ -73,7 +73,7 @@ function ResearchDetail({ isin }: { isin: string }) {
                 <Badge variant="outline" className={cn("text-[10px]", TIER_STYLE[detail.components[0] ? "full" : "screening_only"])}>
                   Full Coverage
                 </Badge>
-                <span className="text-xs text-muted-foreground">Confidence: {detail.confidence.toFixed(0)}%</span>
+                <span className="text-xs text-muted-foreground">Confidence: {(detail.confidence ?? 0).toFixed(0)}%</span>
               </div>
             </div>
           </div>
@@ -213,7 +213,7 @@ export default function Research() {
                         <Badge variant="outline" className={cn("text-[10px]", TIER_STYLE[r.coverage_tier] ?? "")}>{r.coverage_tier}</Badge>
                       </td>
                       <td className="px-3 py-2.5 text-right font-mono font-semibold">{r.research_score.toFixed(1)}</td>
-                      <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">{r.adjusted_research_score.toFixed(1)}</td>
+                      <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">{r.adjusted_research_score?.toFixed(1) ?? "—"}</td>
                       <td className="px-3 py-2.5 text-right">
                         <span className={cn("font-mono", r.confidence >= 80 ? "text-emerald-400" : r.confidence >= 65 ? "text-amber-400" : "text-red-400")}>
                           {r.confidence.toFixed(0)}%

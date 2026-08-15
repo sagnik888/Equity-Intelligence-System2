@@ -472,7 +472,10 @@ export type SignalState = typeof SignalState[keyof typeof SignalState];
 export const SignalState = {
   strong_buy: 'strong_buy',
   buy: 'buy',
+  accumulate: 'accumulate',
+  watch: 'watch',
   hold: 'hold',
+  reduce: 'reduce',
   sell: 'sell',
   avoid: 'avoid',
   pending_review: 'pending_review',
@@ -537,7 +540,10 @@ export type SignalStateSummaryByHorizonItem = {
   horizon: string;
   strong_buy: number;
   buy: number;
+  accumulate: number;
+  watch: number;
   hold: number;
+  reduce: number;
   sell: number;
   avoid: number;
   pending_review?: number;
@@ -1063,10 +1069,13 @@ export type DashboardSummaryUniverseSnapshot = {
 export type DashboardSummarySignalSnapshot = {
   daily_strong_buy: number;
   daily_buy: number;
+  daily_accumulate: number;
   weekly_strong_buy: number;
   weekly_buy?: number;
+  weekly_accumulate?: number;
   monthly_strong_buy: number;
   monthly_buy?: number;
+  monthly_accumulate?: number;
   cross_horizon_confirmed?: number;
 };
 
@@ -1366,7 +1375,10 @@ export type ListSignalsState = typeof ListSignalsState[keyof typeof ListSignalsS
 export const ListSignalsState = {
   strong_buy: 'strong_buy',
   buy: 'buy',
+  accumulate: 'accumulate',
+  watch: 'watch',
   hold: 'hold',
+  reduce: 'reduce',
   sell: 'sell',
   avoid: 'avoid',
   pending_review: 'pending_review',

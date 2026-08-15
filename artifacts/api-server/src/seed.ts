@@ -21,6 +21,7 @@ import {
   recentChangesTable,
 } from "@workspace/db";
 import { sql } from "drizzle-orm";
+import { calculateCandidateScore } from "./lib/scoring";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -72,55 +73,58 @@ const SECURITIES = [
 // ─── scoring engine ────────────────────────────────────────────────────────────
 
 function computeCandidateScore(s: typeof SECURITIES[number]) {
-  // Quality score (weight 20%)
-  const quality = Math.min(100, Math.max(0,
-    (!s.roic ? 60 : Math.min(100, s.roic * 1.8)) * 0.25 +
-    (!s.roce ? 60 : Math.min(100, s.roce * 1.2)) * 0.15 +
-    Math.min(100, s.ebitdam * 2.5) * 0.20 +
-    (!s.ic ? 70 : Math.min(100, s.ic * 1.5)) * 0.20 +
-    70 * 0.20  // stability placeholder
-  ));
+  const result = calculateCandidateScore({
+    roicPct: s.roic,
+    rocePct: s.roce,
+    roePct: s.roe,
+    cfoTtmCr: s.cfo,
+    fcfTtmCr: s.fcf,
+    patTtmCr: s.pat,
+    ebitdaMarginPct: s.ebitdam,
+    revenueGrowth3yPct: s.rev3y,
+    epsGrowth3yPct: s.eps3y,
+    netDebtToEbitda: s.ndEbitda,
+    interestCoverage: s.ic,
+    peRatio: s.pe,
+    pbRatio: s.pb,
+    evEbitda: s.evEbitda,
+    fcfYieldPct: s.fcfY,
+    dividendYieldPct: s.dy,
+    medianDailyTradedValueCr: s.dtv,
+    promoterHoldingPct: s.promoter,
+    dataAgeDays: 10,
+    sourceCoveragePct: s.dc,
+    financialReconciliationPct: s.dc,
+    historicalCoveragePct: s.dc,
+    sourceAgreementPct: s.dc,
+    parsingConfidencePct: s.dc,
+    sectorModelCompletenessPct: s.dc,
+    corporateActionCompletenessPct: s.dc,
+    hardGateCap: s.isin === "INE880J01026" ? 0 : s.isin === "INE003A01024" ? 55 : 100,
+  });
 
-  // Growth score (weight 20%)
-  const growth = Math.min(100, Math.max(0,
-    Math.min(100, Math.max(0, (s.rev3y + 5) * 2.5)) * 0.40 +
-    Math.min(100, Math.max(0, (s.eps3y + 5) * 2.5)) * 0.40 +
-    65 * 0.20
-  ));
-
-  // Value score (weight 20%)
-  const rawValue = 100 - Math.min(100, Math.max(0, (s.pe ?? 40) - 10) * 1.5);
-  const value = Math.min(100, Math.max(0, rawValue));
-
-  // Balance sheet score (weight 15%)
-  const ndOk = s.ndEbitda === null ? 70 : Math.min(100, Math.max(0, (3 - s.ndEbitda) * 25));
-  const icOk = !s.ic ? 70 : Math.min(100, s.ic * 2.5);
-  const balanceSheet = (ndOk * 0.50 + icOk * 0.30 + 70 * 0.20);
-
-  // Capital allocation (weight 15%)
-  const capAlloc = Math.min(100,
-    (!s.roic ? 60 : Math.min(100, (s.roic - 8) * 5 + 50)) * 0.50 +
-    70 * 0.50
-  );
-
-  // Integrity (weight 10%)
-  const integrity = 70; // placeholder — requires analyst input
-
-  // Weighted Candidate Score
-  const raw = quality * 0.20 + growth * 0.20 + value * 0.20 + balanceSheet * 0.15 + capAlloc * 0.15 + integrity * 0.10;
-
-  return { quality, growth, value, balanceSheet, capAlloc, integrity, candidate: Math.min(100, Math.max(0, raw)) };
+  return {
+    quality: result.components.quality.score,
+    growth: result.components.growth.score,
+    value: result.components.value.adjustedScore,
+    balanceSheet: result.components.balanceSheet.score,
+    capAlloc: result.components.capitalAllocation.score,
+    integrity: result.components.integrity.score,
+    candidate: result.finalScore,
+  };
 }
 
 function computeDataConfidence(s: typeof SECURITIES[number]) {
   return s.dc; // already set per security
 }
 
-function signalState(hss: number): "strong_buy" | "buy" | "hold" | "sell" | "avoid" {
-  if (hss >= 75) return "strong_buy";
-  if (hss >= 58) return "buy";
-  if (hss >= 42) return "hold";
-  if (hss >= 28) return "sell";
+function signalState(hss: number): "strong_buy" | "buy" | "accumulate" | "watch" | "hold" | "reduce" | "avoid" {
+  if (hss >= 85) return "strong_buy";
+  if (hss >= 75) return "buy";
+  if (hss >= 68) return "accumulate";
+  if (hss >= 58) return "watch";
+  if (hss >= 45) return "hold";
+  if (hss >= 35) return "reduce";
   return "avoid";
 }
 

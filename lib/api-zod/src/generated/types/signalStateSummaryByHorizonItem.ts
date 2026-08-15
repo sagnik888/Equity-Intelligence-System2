@@ -10,7 +10,10 @@ export type SignalStateSummaryByHorizonItem = {
   horizon: string;
   strong_buy: number;
   buy: number;
+  accumulate: number;
+  watch: number;
   hold: number;
+  reduce: number;
   sell: number;
   avoid: number;
   pending_review?: number;

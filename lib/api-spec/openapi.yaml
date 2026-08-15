@@ -314,7 +314,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [strong_buy, buy, hold, sell, avoid, pending_review]
+            enum: [strong_buy, buy, accumulate, watch, hold, reduce, sell, avoid, pending_review]
         - name: sector
           in: query
           schema: { type: string }
@@ -1132,7 +1132,7 @@ components:
           enum: [daily, weekly, monthly, medium, long]
         state:
           type: string
-          enum: [strong_buy, buy, hold, sell, avoid, pending_review, no_signal]
+          enum: [strong_buy, buy, accumulate, watch, hold, reduce, sell, avoid, pending_review, no_signal]
         hss: { type: number }
         confidence: { type: number }
         stale_penalty: { type: number }
@@ -1193,12 +1193,15 @@ components:
           type: array
           items:
             type: object
-            required: [horizon, strong_buy, buy, hold, sell, avoid]
+            required: [horizon, strong_buy, buy, accumulate, watch, hold, reduce, sell, avoid]
             properties:
               horizon: { type: string }
               strong_buy: { type: integer }
               buy: { type: integer }
+              accumulate: { type: integer }
+              watch: { type: integer }
               hold: { type: integer }
+              reduce: { type: integer }
               sell: { type: integer }
               avoid: { type: integer }
               pending_review: { type: integer }
@@ -1631,14 +1634,17 @@ components:
             last_updated: { type: string }
         signal_snapshot:
           type: object
-          required: [daily_strong_buy, daily_buy, weekly_strong_buy, monthly_strong_buy]
+          required: [daily_strong_buy, daily_buy, daily_accumulate, weekly_strong_buy, monthly_strong_buy]
           properties:
             daily_strong_buy: { type: integer }
             daily_buy: { type: integer }
+            daily_accumulate: { type: integer }
             weekly_strong_buy: { type: integer }
             weekly_buy: { type: integer }
+            weekly_accumulate: { type: integer }
             monthly_strong_buy: { type: integer }
             monthly_buy: { type: integer }
+            monthly_accumulate: { type: integer }
             cross_horizon_confirmed: { type: integer }
         portfolio_snapshot:
           type: object

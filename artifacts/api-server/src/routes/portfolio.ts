@@ -9,6 +9,7 @@ import {
   ListSuitabilityScoresQueryParams,
   CalculatePositionSizeBody,
 } from "@workspace/api-zod";
+import { positionSizingV2 } from "../lib/positionSizing";
 
 const router: IRouter = Router();
 
@@ -210,48 +211,52 @@ router.post("/portfolio/size", async (req, res): Promise<void> => {
   const name = security.name;
   const medianDtv = security.medianDailyTradedValueCr ? parseFloat(security.medianDailyTradedValueCr) : 5;
 
-  // POSITION_SIZING_V2 formula from spec
-  const riskBudget = portfolio_capital * (risk_percent_per_unit / 100);
-  const roundtripCost = entry_price * (estimated_roundtrip_cost_pct / 100);
-  const perUnitRisk = Math.abs(entry_price - stop_price) + roundtripCost;
-  const minPriceRisk = entry_price * 0.005;
-  const effectiveRisk = Math.max(perUnitRisk, minPriceRisk);
-  const quantityByRisk = Math.floor(riskBudget / effectiveRisk);
+  const currentPositions = await db.select().from(portfolioPositionsTable)
+    .where(ne(portfolioPositionsTable.status, "closed"));
+  const currentCompanyValue = currentPositions
+    .filter((position) => position.isin === isin)
+    .reduce((total, position) => total + parseFloat(position.currentPrice) * position.quantity, 0);
+  const currentSectorValue = currentPositions
+    .filter((position) => position.sector === security.sector)
+    .reduce((total, position) => total + parseFloat(position.currentPrice) * position.quantity, 0);
+  const currentHorizonValue = currentPositions
+    .filter((position) => position.horizon === "medium")
+    .reduce((total, position) => total + parseFloat(position.currentPrice) * position.quantity, 0);
 
-  const liquidityCapacityValue = medianDtv * 1_00_00_000 * allowed_participation_rate * max_exit_days;
-  const quantityByLiquidity = Math.floor(liquidityCapacityValue / entry_price);
-  const quantityByCompanyCap = Math.floor((portfolio_capital * max_company_weight) / entry_price);
-  const quantityBySectorCap = Math.floor((portfolio_capital * max_sector_weight) / entry_price);
-
-  const finalQuantity = Math.max(0, Math.min(quantityByRisk, quantityByLiquidity, quantityByCompanyCap, quantityBySectorCap));
-
-  const constraints = [
-    { name: "risk", val: quantityByRisk },
-    { name: "liquidity", val: quantityByLiquidity },
-    { name: "company_cap", val: quantityByCompanyCap },
-    { name: "sector_cap", val: quantityBySectorCap },
-  ];
-  const binding = constraints.reduce((min, c) => c.val < min.val ? c : min, constraints[0]!);
-
-  const estimatedExitDays = finalQuantity > 0 && medianDtv > 0
-    ? (finalQuantity * entry_price) / (medianDtv * 1_00_00_000 * allowed_participation_rate)
-    : null;
+  const sized = positionSizingV2({
+    accountCapital: portfolio_capital,
+    riskPercent: risk_percent_per_unit,
+    entryPrice: entry_price,
+    stopPrice: stop_price,
+    medianDailyTradedValueCr: medianDtv,
+    allowedParticipationRate: allowed_participation_rate,
+    maxExitDays: max_exit_days,
+    maxCompanyWeight: max_company_weight,
+    maxSectorWeight: max_sector_weight,
+    maxHorizonWeight: 0.25,
+    maxCorrelationWeight: 0.2,
+    maxEventWeight: 0.2,
+    currentCompanyValue,
+    currentSectorValue,
+    currentHorizonValue,
+    roundTripCostPct: estimated_roundtrip_cost_pct,
+  });
 
   res.json({
     isin,
     ticker,
     name,
-    final_quantity: finalQuantity,
-    quantity_by_risk: quantityByRisk,
-    quantity_by_liquidity: quantityByLiquidity,
-    quantity_by_company_cap: quantityByCompanyCap,
-    quantity_by_sector_cap: quantityBySectorCap,
-    binding_constraint: binding.name,
-    position_value: finalQuantity * entry_price,
-    portfolio_weight_pct: (finalQuantity * entry_price / portfolio_capital) * 100,
-    risk_amount: finalQuantity * effectiveRisk,
+    final_quantity: sized.finalQuantity,
+    quantity_by_risk: sized.quantityByRisk,
+    quantity_by_liquidity: sized.quantityByLiquidity,
+    quantity_by_company_cap: sized.quantityByCompanyCap,
+    quantity_by_sector_cap: sized.quantityBySectorCap,
+    binding_constraint: sized.bindingConstraint === "event_risk_cap" ? "event_cap" : sized.bindingConstraint,
+    position_value: sized.finalPositionValue,
+    portfolio_weight_pct: sized.portfolioWeightPct,
+    risk_amount: sized.riskAmount,
     median_daily_traded_value_cr: medianDtv,
-    estimated_exit_days: estimatedExitDays,
+    estimated_exit_days: sized.estimatedExitDays,
   });
 });
 

@@ -51,10 +51,13 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
     signal_snapshot: {
       daily_strong_buy: getSig("daily", "strong_buy"),
       daily_buy: getSig("daily", "buy"),
+      daily_accumulate: getSig("daily", "accumulate"),
       weekly_strong_buy: getSig("weekly", "strong_buy"),
       weekly_buy: getSig("weekly", "buy"),
+      weekly_accumulate: getSig("weekly", "accumulate"),
       monthly_strong_buy: getSig("monthly", "strong_buy"),
       monthly_buy: getSig("monthly", "buy"),
+      monthly_accumulate: getSig("monthly", "accumulate"),
       cross_horizon_confirmed: getSig("daily", "strong_buy") > 0 ? Math.floor(getSig("daily", "strong_buy") * 0.6) : 0,
     },
     portfolio_snapshot: {

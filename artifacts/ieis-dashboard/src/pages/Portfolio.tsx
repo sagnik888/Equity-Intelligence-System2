@@ -29,6 +29,7 @@ export default function Portfolio() {
   const { data: positions, isLoading } = useListPortfolioPositions();
 
   const allPositions = positions?.items ?? [];
+  const paperPositions = allPositions.filter((position) => position.status === "paper");
   const pnl = summary?.unrealized_pnl ?? 0;
   const pnlPct = summary?.unrealized_pnl_pct ?? 0;
   const pieData = summary?.sector_concentration?.slice(0, 6).map((s, i) => ({
@@ -112,13 +113,13 @@ export default function Portfolio() {
             <Card className="border-border">
               <CardContent className="p-3">
                 <p className="text-[10px] text-muted-foreground">Open Positions</p>
-                <p className="text-2xl font-bold font-mono text-emerald-400">{summary?.open_positions ?? 0}</p>
+                <p className="text-2xl font-bold font-mono text-emerald-400">{summary?.positions_count ?? 0}</p>
               </CardContent>
             </Card>
             <Card className="border-border">
               <CardContent className="p-3">
                 <p className="text-[10px] text-muted-foreground">Paper Positions</p>
-                <p className="text-2xl font-bold font-mono text-blue-400">{summary?.paper_positions ?? 0}</p>
+                <p className="text-2xl font-bold font-mono text-blue-400">{paperPositions.length}</p>
               </CardContent>
             </Card>
           </div>
@@ -162,13 +163,13 @@ export default function Portfolio() {
                       {p.stop_price ? `₹${p.stop_price.toLocaleString("en-IN")}` : "—"}
                     </td>
                     <td className="px-3 py-2.5 text-right font-mono">
-                      <span className={p.unrealized_pnl >= 0 ? "text-emerald-400" : "text-red-400"}>
-                        {p.unrealized_pnl >= 0 ? "+" : ""}₹{Math.abs(p.unrealized_pnl).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                      <span className={(p.unrealized_pnl ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}>
+                        {(p.unrealized_pnl ?? 0) >= 0 ? "+" : ""}₹{Math.abs(p.unrealized_pnl ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 text-right font-mono">
-                      <span className={p.unrealized_pnl_pct >= 0 ? "text-emerald-400" : "text-red-400"}>
-                        {p.unrealized_pnl_pct >= 0 ? "+" : ""}{p.unrealized_pnl_pct.toFixed(2)}%
+                      <span className={(p.unrealized_pnl_pct ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}>
+                        {(p.unrealized_pnl_pct ?? 0) >= 0 ? "+" : ""}{(p.unrealized_pnl_pct ?? 0).toFixed(2)}%
                       </span>
                     </td>
                     <td className="px-3 py-2.5 text-right">

@@ -10,16 +10,20 @@ import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 
 const HORIZONS = ["all", "daily", "weekly", "monthly", "medium", "long"];
-const STATES = ["strong_buy", "buy", "hold", "sell", "avoid"];
+const STATES = ["strong_buy", "buy", "accumulate", "watch", "hold", "reduce", "avoid"];
 const STATE_STYLE: Record<string, string> = {
   strong_buy: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   buy: "bg-green-500/10 text-green-400 border-green-500/20",
+  accumulate: "bg-lime-500/10 text-lime-400 border-lime-500/20",
+  watch: "bg-sky-500/10 text-sky-400 border-sky-500/20",
   hold: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  reduce: "bg-orange-500/10 text-orange-400 border-orange-500/20",
   sell: "bg-orange-500/10 text-orange-400 border-orange-500/20",
   avoid: "bg-red-500/10 text-red-400 border-red-500/20",
 };
 const STATE_LABEL: Record<string, string> = {
-  strong_buy: "Strong Buy", buy: "Buy", hold: "Hold", sell: "Sell", avoid: "Avoid", pending_review: "Pending",
+  strong_buy: "Strong Buy", buy: "Buy", accumulate: "Accumulate", watch: "Watch",
+  hold: "Hold", reduce: "Reduce", sell: "Sell", avoid: "Avoid", pending_review: "Pending",
 };
 
 function HssBar({ value }: { value: number }) {
@@ -61,7 +65,7 @@ export default function Signals() {
           const row = byHorizon.find(r => r.horizon === h);
           const sb = row?.strong_buy ?? 0;
           const b = row?.buy ?? 0;
-          const total = sb + b + (row?.hold ?? 0) + (row?.sell ?? 0) + (row?.avoid ?? 0);
+          const total = sb + b + (row?.accumulate ?? 0) + (row?.watch ?? 0) + (row?.hold ?? 0) + (row?.reduce ?? 0) + (row?.sell ?? 0) + (row?.avoid ?? 0);
           return (
             <Card key={h} className="border-border cursor-pointer hover:border-primary/30 transition-colors" onClick={() => setHorizon(h)}>
               <CardContent className="p-3">
@@ -87,13 +91,13 @@ export default function Signals() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Zap className="h-3.5 w-3.5 text-emerald-400" />
-              Top Strong Buys Today
+              Top Buy Signals Today
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="flex gap-4 px-4 py-3 overflow-x-auto">
               {topBuys.items.slice(0, 5).map(s => (
-                <Link key={s.isin} href={`/universe/${s.isin}`}>
+                <Link key={`${s.isin}-${s.horizon}`} href={`/universe/${s.isin}`}>
                   <div className="shrink-0 w-36 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20 cursor-pointer hover:bg-emerald-500/10 transition-colors">
                     <div className="font-mono font-semibold text-sm text-emerald-400">{s.ticker}</div>
                     <div className="text-[10px] text-muted-foreground truncate">{s.name}</div>

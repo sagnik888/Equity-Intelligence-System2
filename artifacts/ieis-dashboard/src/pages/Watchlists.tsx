@@ -7,6 +7,8 @@ import { BookMarked, ChevronRight, ArrowLeft, TrendingUp, AlertTriangle, Bell } 
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 
+type WatchlistName = Parameters<typeof useGetWatchlist>[0];
+
 const CAT_STYLE: Record<string, string> = {
   opportunity: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   risk: "bg-red-500/10 text-red-400 border-red-500/20",
@@ -18,7 +20,7 @@ const CAT_ICON: Record<string, any> = {
 };
 
 function WatchlistDetail({ name }: { name: string }) {
-  const { data, isLoading } = useGetWatchlist({ name });
+  const { data, isLoading } = useGetWatchlist(name as WatchlistName);
 
   if (isLoading) return <div className="p-8"><Skeleton className="h-48 w-full" /></div>;
   if (!data) return null;
@@ -78,7 +80,7 @@ function WatchlistDetail({ name }: { name: string }) {
 }
 
 export default function Watchlists() {
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<WatchlistName | null>(null);
   const { data, isLoading } = useListWatchlists();
 
   const lists = data?.watchlists ?? [];
@@ -130,10 +132,10 @@ export default function Watchlists() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                 {items.map(w => (
-                  <Card key={w.name} className="border-border cursor-pointer hover:border-primary/30 transition-all" onClick={() => setSelected(w.name)}>
+                  <Card key={w.name} className="border-border cursor-pointer hover:border-primary/30 transition-all" onClick={() => setSelected(w.name as WatchlistName)}>
                     <CardContent className="p-3">
                       <div className="flex items-start justify-between mb-1.5">
-                        <Badge variant="outline" className={cn("text-[10px] px-1.5", CAT_STYLE[w.category] ?? "")}>
+                        <Badge variant="outline" className={cn("text-[10px] px-1.5", CAT_STYLE[w.category ?? ""] ?? "")}>
                           {w.count} stocks
                         </Badge>
                         <ChevronRight className="h-3 w-3 text-muted-foreground" />

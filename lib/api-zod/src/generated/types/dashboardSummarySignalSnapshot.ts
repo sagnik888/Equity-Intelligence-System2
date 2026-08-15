@@ -9,9 +9,12 @@
 export type DashboardSummarySignalSnapshot = {
   daily_strong_buy: number;
   daily_buy: number;
+  daily_accumulate: number;
   weekly_strong_buy: number;
   weekly_buy?: number;
+  weekly_accumulate?: number;
   monthly_strong_buy: number;
   monthly_buy?: number;
+  monthly_accumulate?: number;
   cross_horizon_confirmed?: number;
 };
