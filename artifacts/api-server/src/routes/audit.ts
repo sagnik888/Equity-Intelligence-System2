@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
-import { and, eq, lte } from "drizzle-orm";
+import { and, eq, lte, desc } from "drizzle-orm";
 import { db, securitiesTable, candidateScoresTable, researchScoresTable, hardGatesTable, signalsTable, portfolioPositionsTable, scoreHistoryTable, signalHistoryTable } from "@workspace/db";
+import { FORMULA_VERSION } from "../lib/formulas";
 
 const router: IRouter = Router();
 
@@ -10,11 +11,11 @@ router.get("/audit/:isin/history/:date", async (req, res): Promise<void> => {
 
   const [security, score, research, gates, signals, position] = await Promise.all([
     db.select().from(securitiesTable).where(eq(securitiesTable.isin, rawIsin)).then(r => r[0]),
-    db.select().from(candidateScoresTable).where(and(eq(candidateScoresTable.isin, rawIsin), lte(candidateScoresTable.scoreDate, rawDate))).then(r => r[0]),
-    db.select().from(researchScoresTable).where(and(eq(researchScoresTable.isin, rawIsin), lte(researchScoresTable.scoreDate, rawDate))).then(r => r[0]),
-    db.select().from(hardGatesTable).where(and(eq(hardGatesTable.isin, rawIsin), lte(hardGatesTable.flaggedAt, rawDate))),
-    db.select().from(signalsTable).where(and(eq(signalsTable.isin, rawIsin), lte(signalsTable.signalDate, rawDate))),
-    db.select().from(portfolioPositionsTable).where(and(eq(portfolioPositionsTable.isin, rawIsin), lte(portfolioPositionsTable.entryDate, rawDate))).then(r => r[0]),
+     db.select().from(candidateScoresTable).where(and(eq(candidateScoresTable.isin, rawIsin), lte(candidateScoresTable.scoreDate, rawDate))).orderBy(desc(candidateScoresTable.scoreDate)).limit(1).then(r => r[0]),
+     db.select().from(researchScoresTable).where(and(eq(researchScoresTable.isin, rawIsin), lte(researchScoresTable.scoreDate, rawDate))).orderBy(desc(researchScoresTable.scoreDate)).limit(1).then(r => r[0]),
+     db.select().from(hardGatesTable).where(and(eq(hardGatesTable.isin, rawIsin), lte(hardGatesTable.flaggedAt, rawDate))).orderBy(desc(hardGatesTable.flaggedAt)),
+     db.select().from(signalsTable).where(and(eq(signalsTable.isin, rawIsin), lte(signalsTable.signalDate, rawDate))).orderBy(desc(signalsTable.signalDate)),
+     db.select().from(portfolioPositionsTable).where(and(eq(portfolioPositionsTable.isin, rawIsin), lte(portfolioPositionsTable.entryDate, rawDate))).orderBy(desc(portfolioPositionsTable.entryDate)).limit(1).then(r => r[0]),
   ]);
 
   if (!security) {
@@ -53,13 +54,10 @@ router.get("/audit/:isin/history/:date", async (req, res): Promise<void> => {
       entry_price: parseFloat(position.entryPrice),
       horizon: position.horizon,
     } : null,
-    model_version: "IEIS v7.2",
-    formula_version: "7.1.2-consolidated",
-    decision_explanation: `Historical snapshot for ${security.name} (${rawIsin}) as of ${rawDate}. Candidate score: ${score?.candidateScore ?? "N/A"}. System was in alert/paper mode.`,
-    available_filings: [
-      { filing_type: "Annual Report", period: "FY2024", source: "BSE Filing System", timestamp: `${rawDate}T09:00:00Z` },
-      { filing_type: "Quarterly Results", period: "Q4 FY2024", source: "NSE Filing System", timestamp: `${rawDate}T08:30:00Z` },
-    ],
+     model_version: "IEIS v7.2",
+     formula_version: FORMULA_VERSION,
+     decision_explanation: `Historical snapshot for ${security.name} (${rawIsin}) as of ${rawDate}. Values are limited to records whose effective dates are on or before the requested date; unavailable source filings are not fabricated.`,
+     available_filings: [],
     later_revisions: [],
   });
 });

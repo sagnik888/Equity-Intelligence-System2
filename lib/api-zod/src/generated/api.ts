@@ -850,6 +850,50 @@ export const CalculatePositionSizeResponse = zod.object({
 
 
 /**
+ * @summary List paper order intents
+ */
+export const ListPaperOrderIntentsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "idempotency_key": zod.string(),
+  "isin": zod.string(),
+  "ticker": zod.string(),
+  "side": zod.enum(['buy', 'sell']),
+  "order_type": zod.enum(['market', 'limit']),
+  "quantity": zod.number(),
+  "limit_price": zod.number().nullish(),
+  "status": zod.string(),
+  "rationale": zod.string().nullish(),
+  "created_by": zod.string().optional(),
+  "approved_by": zod.string().nullish(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date()
+})),
+  "total": zod.number(),
+  "execution_mode": zod.enum(['paper_only'])
+})
+
+
+/**
+ * @summary Create a duplicate-safe paper order intent
+ */
+export const createPaperOrderIntentBodyOrderTypeDefault = `limit`;
+
+
+export const CreatePaperOrderIntentBody = zod.object({
+  "isin": zod.string(),
+  "side": zod.enum(['buy', 'sell']),
+  "order_type": zod.enum(['market', 'limit']).default(createPaperOrderIntentBodyOrderTypeDefault),
+  "quantity": zod.number().min(1),
+  "limit_price": zod.number().nullish(),
+  "idempotency_key": zod.string(),
+  "rationale": zod.string().nullish()
+})
+
+export const CreatePaperOrderIntentResponse = zod.unknown()
+
+
+/**
  * @summary List deep research scores
  */
 export const listResearchScoresQueryLimitDefault = 50;
@@ -1171,6 +1215,19 @@ export const GetDashboardAlertsResponse = zod.object({
 
 
 /**
+ * @summary Acknowledge an alert
+ */
+export const MarkDashboardAlertReadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MarkDashboardAlertReadResponse = zod.object({
+  "id": zod.number(),
+  "is_read": zod.boolean()
+})
+
+
+/**
  * @summary Score and signal distribution by sector
  */
 export const GetSectorBreakdownResponse = zod.object({
@@ -1281,6 +1338,56 @@ export const GetAuditHistoryResponse = zod.object({
   "change_type": zod.string(),
   "description": zod.string()
 })).optional()
+})
+
+
+/**
+ * @summary Versioned formula registry with governance metadata
+ */
+export const ListFormulaRegistryResponse = zod.object({
+  "registry_version": zod.string(),
+  "generated_at": zod.coerce.date(),
+  "formulas": zod.array(zod.object({
+  "id": zod.string(),
+  "version": zod.string(),
+  "name": zod.string(),
+  "expression": zod.string(),
+  "variables": zod.array(zod.string()),
+  "units": zod.string(),
+  "validRange": zod.string(),
+  "missingValueRule": zod.string(),
+  "zeroDivisionRule": zod.string(),
+  "testStatus": zod.string(),
+  "owner": zod.string(),
+  "approvalStatus": zod.string()
+}))
+})
+
+
+/**
+ * @summary Data, model, investment, and execution validation status
+ */
+export const GetGovernanceStatusResponse = zod.object({
+  "system_mode": zod.enum(['alert_paper']),
+  "live_execution_enabled": zod.boolean(),
+  "dataset_status": zod.string(),
+  "coverage": zod.object({
+  "current": zod.number(),
+  "target": zod.number(),
+  "coverage_pct": zod.number()
+}),
+  "validation": zod.object({
+  "data": zod.string(),
+  "model": zod.string(),
+  "investment": zod.string(),
+  "execution": zod.string()
+}),
+  "foundations": zod.object({
+  "licensed_sources_registered": zod.boolean(),
+  "point_in_time_facts": zod.boolean(),
+  "corporate_actions": zod.boolean()
+}),
+  "generated_at": zod.coerce.date()
 })
 
 

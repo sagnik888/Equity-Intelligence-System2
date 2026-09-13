@@ -1,6 +1,15 @@
 import { Router, type IRouter } from "express";
 import { and, eq, sql, desc, ne } from "drizzle-orm";
-import { db, portfolioPositionsTable, securitiesTable, signalsTable } from "@workspace/db";
+import {
+  db,
+  portfolioPositionsTable,
+  portfolioSettingsTable,
+  paperOrderIntentsTable,
+  securitiesTable,
+  signalsTable,
+  candidateScoresTable,
+  hardGatesTable,
+} from "@workspace/db";
 import {
   AddPortfolioPositionBody,
   UpdatePortfolioPositionBody,
@@ -123,7 +132,8 @@ router.delete("/portfolio/:id", async (req, res): Promise<void> => {
 
 router.get("/portfolio/summary", async (_req, res): Promise<void> => {
   const positions = await db.select().from(portfolioPositionsTable).where(ne(portfolioPositionsTable.status, "closed"));
-  const totalCapital = 10_000_000; // 1 Crore default capital
+  const [settings] = await db.select().from(portfolioSettingsTable).where(eq(portfolioSettingsTable.id, 1));
+  const totalCapital = settings ? parseFloat(settings.capital) : 0;
   const totalValue = positions.reduce((sum, p) => sum + parseFloat(p.currentPrice) * p.quantity, 0);
   const totalCost = positions.reduce((sum, p) => sum + parseFloat(p.entryPrice) * p.quantity, 0);
   const unrealizedPnl = totalValue - totalCost;
@@ -153,7 +163,10 @@ router.get("/portfolio/summary", async (_req, res): Promise<void> => {
     })).sort((a, b) => b.weight_pct - a.weight_pct),
     top_winners: sorted.slice(0, 3).map(p => mapPosition(p, totalValue)),
     top_losers: sorted.slice(-3).reverse().map(p => mapPosition(p, totalValue)),
-    review_required: positions.filter(p => p.currentSignal === "sell" || p.currentSignal === "avoid").map(p => mapPosition(p, totalValue)),
+     review_required: positions.filter(p => ["reduce", "sell", "avoid", "pending_review"].includes(p.currentSignal ?? "")).map(p => mapPosition(p, totalValue)),
+     operating_mode: settings?.operatingMode ?? "paper",
+     live_execution_enabled: settings?.liveExecutionEnabled ?? false,
+     kill_switch_enabled: settings?.killSwitchEnabled ?? false,
   });
 });
 
@@ -162,18 +175,34 @@ router.get("/portfolio/suitability", async (req, res): Promise<void> => {
   if (!query.success) { res.status(400).json({ error: query.error.message }); return; }
 
   // Generate suitability scores from signals and securities
-  const signals = await db.select().from(signalsTable)
+  const [signals, securities, scores, gates, openPositions] = await Promise.all([
+    db.select().from(signalsTable)
     .where(eq(signalsTable.horizon, "monthly"))
     .orderBy(desc(signalsTable.hss))
-    .limit(query.data.limit ?? 50);
+    .limit(query.data.limit ?? 50),
+    db.select().from(securitiesTable),
+    db.select().from(candidateScoresTable),
+    db.select().from(hardGatesTable),
+    db.select().from(portfolioPositionsTable).where(ne(portfolioPositionsTable.status, "closed")),
+  ]);
+  const securityMap = new Map(securities.map(s => [s.isin, s]));
+  const scoreMap = new Map(scores.map(s => [s.isin, s]));
+  const sectorCounts = new Map<string, number>();
+  for (const position of openPositions) sectorCounts.set(position.sector, (sectorCounts.get(position.sector) ?? 0) + 1);
 
   const items = signals.map(s => {
+    const security = securityMap.get(s.isin);
+    const score = scoreMap.get(s.isin);
     const returnScore = Math.max(0, Math.min(1, (parseFloat(s.hss) - 50) / 50));
     const confidenceFactor = parseFloat(s.confidence) / 100;
-    const liquidityFactor = 0.85; // placeholder
-    const downside = 1.1;
-    const volatility = 1.15;
-    const raw = 100 * returnScore * confidenceFactor * liquidityFactor / (downside * volatility);
+    const dtv = security?.medianDailyTradedValueCr ? parseFloat(security.medianDailyTradedValueCr) : null;
+    const liquidityFactor = dtv == null ? 0 : Math.min(1, Math.log10(1 + Math.max(0, dtv)) / 3);
+    const debt = security?.netDebtToEbitda ? Math.max(0, parseFloat(security.netDebtToEbitda)) : 0;
+    const downside = 1 + Math.min(1, debt / 10) + (gates.some(g => g.isin === s.isin && g.level === 1) ? 0.5 : 0);
+    const volatility = 1 + Math.max(0, 100 - (score?.dataConfidence ? parseFloat(score.dataConfidence) : 0)) / 100;
+    const correlation = 1 + Math.min(1, (sectorCounts.get(s.sector) ?? 0) / 10);
+    const eventPenalty = 1 + (parseFloat(s.eventPenalty) / 100);
+    const raw = 100 * returnScore * confidenceFactor * liquidityFactor / (downside * volatility * correlation * eventPenalty);
 
     return {
       isin: s.isin,
@@ -186,13 +215,57 @@ router.get("/portfolio/suitability", async (req, res): Promise<void> => {
       liquidity_factor: liquidityFactor,
       downside_penalty: downside,
       volatility_penalty: volatility,
-      correlation_penalty: 1.0,
-      event_penalty: 1 + (parseFloat(s.eventPenalty) / 100),
+       correlation_penalty: correlation,
+       event_penalty: eventPenalty,
       risk_level: raw > 70 ? "low" : raw > 50 ? "medium" : raw > 30 ? "high" : "very_high",
     };
   });
 
   res.json({ items, total: items.length });
+});
+
+router.get("/portfolio/order-intents", async (_req, res): Promise<void> => {
+  const intents = await db.select().from(paperOrderIntentsTable).orderBy(desc(paperOrderIntentsTable.createdAt)).limit(100);
+  res.json({
+    items: intents.map(intent => ({
+      id: intent.id, idempotency_key: intent.idempotencyKey, isin: intent.isin, ticker: intent.ticker,
+      side: intent.side, order_type: intent.orderType, quantity: intent.quantity,
+      limit_price: intent.limitPrice ? parseFloat(intent.limitPrice) : null, status: intent.status,
+      rationale: intent.rationale, created_by: intent.createdBy, approved_by: intent.approvedBy,
+      created_at: intent.createdAt.toISOString(), updated_at: intent.updatedAt.toISOString(),
+    })),
+    total: intents.length,
+    execution_mode: "paper_only",
+  });
+});
+
+router.post("/portfolio/order-intents", async (req, res): Promise<void> => {
+  const body = req.body as Record<string, unknown>;
+  const isin = typeof body.isin === "string" ? body.isin : "";
+  const side = body.side === "buy" || body.side === "sell" ? body.side : null;
+  const quantity = Number(body.quantity);
+  const idempotencyKey = typeof body.idempotency_key === "string" ? body.idempotency_key : "";
+  if (!isin || !side || !Number.isInteger(quantity) || quantity <= 0 || !idempotencyKey) {
+    res.status(400).json({ error: "isin, side, positive integer quantity, and idempotency_key are required" }); return;
+  }
+  const [existing] = await db.select().from(paperOrderIntentsTable).where(eq(paperOrderIntentsTable.idempotencyKey, idempotencyKey));
+  if (existing) {
+    res.status(200).json({ duplicate: true, execution_mode: "paper_only", id: existing.id, status: existing.status }); return;
+  }
+  const [security] = await db.select().from(securitiesTable).where(eq(securitiesTable.isin, isin));
+  if (!security) { res.status(404).json({ error: "Security not found" }); return; }
+  const orderType = body.order_type === "market" ? "market" : "limit";
+  const limitPrice = body.limit_price == null ? null : Number(body.limit_price);
+  if (orderType === "limit" && (limitPrice == null || !Number.isFinite(limitPrice) || limitPrice <= 0)) {
+    res.status(400).json({ error: "A positive limit_price is required for limit orders" }); return;
+  }
+  const [created] = await db.insert(paperOrderIntentsTable).values({
+    idempotencyKey, isin, ticker: security.ticker, side, orderType,
+    quantity, limitPrice: limitPrice == null ? null : String(limitPrice),
+    rationale: typeof body.rationale === "string" ? body.rationale : null,
+    status: "draft", createdBy: "api",
+  }).returning();
+  res.status(201).json({ id: created!.id, status: created!.status, execution_mode: "paper_only", live_execution_enabled: false });
 });
 
 router.post("/portfolio/size", async (req, res): Promise<void> => {

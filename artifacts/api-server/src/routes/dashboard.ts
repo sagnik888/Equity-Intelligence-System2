@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq, sql, desc, isNull, ne } from "drizzle-orm";
+import { and, eq, sql, desc, isNull, ne, gte } from "drizzle-orm";
 import { db, securitiesTable, signalsTable, hardGatesTable, candidateScoresTable, alertsTable, recentChangesTable, portfolioPositionsTable } from "@workspace/db";
 import { GetDashboardAlertsQueryParams, GetRecentChangesQueryParams } from "@workspace/api-zod";
 
@@ -15,6 +15,10 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
     topCandidates,
     portfolioStats,
     dcStats,
+    newListings,
+    staleData,
+    activeAlerts,
+    portfolioPositions,
   ] = await Promise.all([
     db.select({ status: securitiesTable.status, count: sql<number>`count(*)` })
       .from(securitiesTable).groupBy(securitiesTable.status),
@@ -27,6 +31,13 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
       .from(portfolioPositionsTable).where(ne(portfolioPositionsTable.status, "closed")).groupBy(portfolioPositionsTable.status),
     db.select({ class: securitiesTable.dataConfidenceClass, count: sql<number>`count(*)` })
       .from(securitiesTable).groupBy(securitiesTable.dataConfidenceClass),
+    db.select({ count: sql<number>`count(*)` }).from(securitiesTable)
+      .where(gte(securitiesTable.listingDate, new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0]!)),
+    db.select({ count: sql<number>`count(*)` }).from(securitiesTable)
+      .where(sql`${securitiesTable.dataConfidence} < 60`),
+    db.select({ count: sql<number>`count(*)` }).from(alertsTable)
+      .where(and(eq(alertsTable.isRead, false), ne(alertsTable.severity, "info"))),
+    db.select().from(portfolioPositionsTable).where(ne(portfolioPositionsTable.status, "closed")),
   ]);
 
   const total = uniStats.reduce((s, r) => s + Number(r.count), 0);
@@ -43,7 +54,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
     universe_snapshot: {
       total_securities: total,
       investable: active,
-      new_listings_30d: 3,
+       new_listings_30d: Number(newListings[0]?.count ?? 0),
       level1_gates: gateCount(1),
       level2_gates: gateCount(2),
       last_updated: today,
@@ -58,13 +69,17 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
       monthly_strong_buy: getSig("monthly", "strong_buy"),
       monthly_buy: getSig("monthly", "buy"),
       monthly_accumulate: getSig("monthly", "accumulate"),
-      cross_horizon_confirmed: getSig("daily", "strong_buy") > 0 ? Math.floor(getSig("daily", "strong_buy") * 0.6) : 0,
+       cross_horizon_confirmed: Math.min(
+         getSig("daily", "strong_buy"),
+         getSig("weekly", "strong_buy"),
+         getSig("monthly", "strong_buy"),
+       ),
     },
     portfolio_snapshot: {
       open_positions: openPositions,
       paper_positions: paperPositions,
-      unrealized_pnl_pct: null,
-      positions_needing_review: 0,
+       unrealized_pnl_pct: totalValueAndCost(portfolioPositions).pnlPct,
+       positions_needing_review: 0,
     },
     top_candidates: topCandidates.map(s => ({
       isin: s.isin,
@@ -86,13 +101,21 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
     })),
     data_quality: {
       high_confidence_pct: total > 0 ? (highConf / total) * 100 : 0,
-      stale_data_count: 12,
-      reconciliation_alerts: gateCount(1),
+       stale_data_count: Number(staleData[0]?.count ?? 0),
+       reconciliation_alerts: Number(activeAlerts[0]?.count ?? 0),
     },
     system_mode: "alert",
     score_date: today,
   });
 });
+
+function totalValueAndCost(positions: Array<{ currentPrice: string; entryPrice: string; quantity: number }>) {
+  // The dashboard only needs an aggregate; this helper is kept deterministic and
+  // uses the same marked-to-market values as the portfolio endpoint.
+  const value = positions.reduce((sum, position) => sum + Number(position.currentPrice) * position.quantity, 0);
+  const cost = positions.reduce((sum, position) => sum + Number(position.entryPrice) * position.quantity, 0);
+  return { pnlPct: cost > 0 ? ((value - cost) / cost) * 100 : 0 };
+}
 
 router.get("/dashboard/alerts", async (req, res): Promise<void> => {
   const query = GetDashboardAlertsQueryParams.safeParse(req.query);
@@ -119,6 +142,14 @@ router.get("/dashboard/alerts", async (req, res): Promise<void> => {
     total: Number(countResult[0]?.count ?? 0),
     unread_count: Number(unread[0]?.count ?? 0),
   });
+});
+
+router.patch("/dashboard/alerts/:id/read", async (req, res): Promise<void> => {
+  const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  if (!Number.isInteger(id)) { res.status(400).json({ error: "Invalid alert id" }); return; }
+  const [updated] = await db.update(alertsTable).set({ isRead: true }).where(eq(alertsTable.id, id)).returning();
+  if (!updated) { res.status(404).json({ error: "Alert not found" }); return; }
+  res.json({ id: updated.id, is_read: updated.isRead });
 });
 
 router.get("/dashboard/sector-breakdown", async (_req, res): Promise<void> => {

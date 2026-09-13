@@ -1,13 +1,14 @@
-import { useGetDashboardSummary, useGetDashboardAlerts, useGetRecentChanges, useGetSectorBreakdown } from "@workspace/api-client-react";
+import { useGetDashboardSummary, useGetDashboardAlerts, useGetRecentChanges, useGetSectorBreakdown, useMarkDashboardAlertRead } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Globe2, Zap, ShieldAlert, AlertTriangle, TrendingUp, TrendingDown,
-  ArrowUpRight, ArrowDownRight, Minus, Bell, RefreshCw, BarChart3
+  ArrowUpRight, ArrowDownRight, Minus, Bell, RefreshCw, BarChart3, Check
 } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 const stateColor: Record<string, string> = {
@@ -55,6 +56,7 @@ export default function Dashboard() {
   const { data: alertsData } = useGetDashboardAlerts({ limit: 8 });
   const { data: changesData } = useGetRecentChanges({ limit: 8 });
   const { data: sectorData } = useGetSectorBreakdown();
+  const markAlertRead = useMarkDashboardAlertRead();
 
   if (isLoading) {
     return (
@@ -179,6 +181,17 @@ export default function Dashboard() {
                         <p className="text-xs font-medium truncate">{a.title}</p>
                         <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5 line-clamp-2">{a.message}</p>
                       </div>
+                       {!a.is_read && (
+                         <Button
+                           variant="ghost"
+                           size="icon"
+                           className="h-6 w-6 shrink-0 text-muted-foreground"
+                           aria-label={`Acknowledge ${a.title}`}
+                           onClick={() => markAlertRead.mutate({ id: a.id })}
+                         >
+                           <Check className="h-3 w-3" />
+                         </Button>
+                       )}
                     </div>
                   </div>
                 ))}

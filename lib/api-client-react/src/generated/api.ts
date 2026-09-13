@@ -29,9 +29,11 @@ import type {
   ErrorResponse,
   EvidenceLedger,
   FactorAnalysis,
+  FormulaRegistry,
   GetDashboardAlertsParams,
   GetRecentChangesParams,
   GetTopBuySignalsParams,
+  GovernanceStatus,
   HardGateList,
   HardGateSummary,
   HealthStatus,
@@ -42,6 +44,10 @@ import type {
   ListSecuritiesParams,
   ListSignalsParams,
   ListSuitabilityScoresParams,
+  MarkDashboardAlertRead200,
+  PaperOrderIntentInput,
+  PaperOrderIntentList,
+  PaperOrderIntentResponse,
   PortfolioList,
   PortfolioPosition,
   PortfolioSummary,
@@ -1893,6 +1899,154 @@ export const useCalculatePositionSize = <TError = ErrorType<unknown>,
       return useMutation(getCalculatePositionSizeMutationOptions(options));
     }
 
+export const getListPaperOrderIntentsUrl = () => {
+
+
+
+
+  return `/api/portfolio/order-intents`
+}
+
+/**
+ * @summary List paper order intents
+ */
+export const listPaperOrderIntents = async ( options?: RequestInit): Promise<PaperOrderIntentList> => {
+
+  return customFetch<PaperOrderIntentList>(getListPaperOrderIntentsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPaperOrderIntentsQueryKey = () => {
+    return [
+    `/api/portfolio/order-intents`
+    ] as const;
+    }
+
+
+export const getListPaperOrderIntentsQueryOptions = <TData = Awaited<ReturnType<typeof listPaperOrderIntents>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPaperOrderIntents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPaperOrderIntentsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPaperOrderIntents>>> = ({ signal }) => listPaperOrderIntents({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPaperOrderIntents>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPaperOrderIntentsQueryResult = NonNullable<Awaited<ReturnType<typeof listPaperOrderIntents>>>
+export type ListPaperOrderIntentsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List paper order intents
+ */
+
+export function useListPaperOrderIntents<TData = Awaited<ReturnType<typeof listPaperOrderIntents>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPaperOrderIntents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPaperOrderIntentsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreatePaperOrderIntentUrl = () => {
+
+
+
+
+  return `/api/portfolio/order-intents`
+}
+
+/**
+ * @summary Create a duplicate-safe paper order intent
+ */
+export const createPaperOrderIntent = async (paperOrderIntentInput: PaperOrderIntentInput, options?: RequestInit): Promise<void | PaperOrderIntentResponse> => {
+
+  return customFetch<void | PaperOrderIntentResponse>(getCreatePaperOrderIntentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(paperOrderIntentInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePaperOrderIntentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPaperOrderIntent>>, TError,{data: BodyType<PaperOrderIntentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPaperOrderIntent>>, TError,{data: BodyType<PaperOrderIntentInput>}, TContext> => {
+
+const mutationKey = ['createPaperOrderIntent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPaperOrderIntent>>, {data: BodyType<PaperOrderIntentInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPaperOrderIntent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePaperOrderIntentMutationResult = NonNullable<Awaited<ReturnType<typeof createPaperOrderIntent>>>
+    export type CreatePaperOrderIntentMutationBody = BodyType<PaperOrderIntentInput>
+    export type CreatePaperOrderIntentMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a duplicate-safe paper order intent
+ */
+export const useCreatePaperOrderIntent = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPaperOrderIntent>>, TError,{data: BodyType<PaperOrderIntentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPaperOrderIntent>>,
+        TError,
+        {data: BodyType<PaperOrderIntentInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePaperOrderIntentMutationOptions(options));
+    }
+
 export const getListResearchScoresUrl = (params?: ListResearchScoresParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -2677,6 +2831,77 @@ export function useGetDashboardAlerts<TData = Awaited<ReturnType<typeof getDashb
 
 
 
+export const getMarkDashboardAlertReadUrl = (id: number,) => {
+
+
+
+
+  return `/api/dashboard/alerts/${id}/read`
+}
+
+/**
+ * @summary Acknowledge an alert
+ */
+export const markDashboardAlertRead = async (id: number, options?: RequestInit): Promise<MarkDashboardAlertRead200> => {
+
+  return customFetch<MarkDashboardAlertRead200>(getMarkDashboardAlertReadUrl(id),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+
+export const getMarkDashboardAlertReadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markDashboardAlertRead>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markDashboardAlertRead>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['markDashboardAlertRead'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markDashboardAlertRead>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  markDashboardAlertRead(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkDashboardAlertReadMutationResult = NonNullable<Awaited<ReturnType<typeof markDashboardAlertRead>>>
+
+    export type MarkDashboardAlertReadMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Acknowledge an alert
+ */
+export const useMarkDashboardAlertRead = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markDashboardAlertRead>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markDashboardAlertRead>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getMarkDashboardAlertReadMutationOptions(options));
+    }
+
 export const getGetSectorBreakdownUrl = () => {
 
 
@@ -2908,6 +3133,160 @@ export function useGetAuditHistory<TData = Awaited<ReturnType<typeof getAuditHis
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetAuditHistoryQueryOptions(isin,date,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListFormulaRegistryUrl = () => {
+
+
+
+
+  return `/api/governance/formulas`
+}
+
+/**
+ * @summary Versioned formula registry with governance metadata
+ */
+export const listFormulaRegistry = async ( options?: RequestInit): Promise<FormulaRegistry> => {
+
+  return customFetch<FormulaRegistry>(getListFormulaRegistryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFormulaRegistryQueryKey = () => {
+    return [
+    `/api/governance/formulas`
+    ] as const;
+    }
+
+
+export const getListFormulaRegistryQueryOptions = <TData = Awaited<ReturnType<typeof listFormulaRegistry>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFormulaRegistry>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFormulaRegistryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFormulaRegistry>>> = ({ signal }) => listFormulaRegistry({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFormulaRegistry>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFormulaRegistryQueryResult = NonNullable<Awaited<ReturnType<typeof listFormulaRegistry>>>
+export type ListFormulaRegistryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Versioned formula registry with governance metadata
+ */
+
+export function useListFormulaRegistry<TData = Awaited<ReturnType<typeof listFormulaRegistry>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFormulaRegistry>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFormulaRegistryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetGovernanceStatusUrl = () => {
+
+
+
+
+  return `/api/governance/status`
+}
+
+/**
+ * @summary Data, model, investment, and execution validation status
+ */
+export const getGovernanceStatus = async ( options?: RequestInit): Promise<GovernanceStatus> => {
+
+  return customFetch<GovernanceStatus>(getGetGovernanceStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGovernanceStatusQueryKey = () => {
+    return [
+    `/api/governance/status`
+    ] as const;
+    }
+
+
+export const getGetGovernanceStatusQueryOptions = <TData = Awaited<ReturnType<typeof getGovernanceStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGovernanceStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGovernanceStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGovernanceStatus>>> = ({ signal }) => getGovernanceStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGovernanceStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGovernanceStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getGovernanceStatus>>>
+export type GetGovernanceStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Data, model, investment, and execution validation status
+ */
+
+export function useGetGovernanceStatus<TData = Awaited<ReturnType<typeof getGovernanceStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGovernanceStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGovernanceStatusQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -1,0 +1,1 @@
+- [IEIS validation boundaries](ieis-validation-boundaries.md) — keep demo data, model validation, investment validation, and execution readiness separate; live execution stays disabled by default.

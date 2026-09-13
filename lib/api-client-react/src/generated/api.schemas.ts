@@ -9,6 +9,63 @@ export interface HealthStatus {
   status: string;
 }
 
+export type FormulaRegistryFormulasItem = {
+  id: string;
+  version: string;
+  name: string;
+  expression: string;
+  variables: string[];
+  units: string;
+  validRange: string;
+  missingValueRule: string;
+  zeroDivisionRule: string;
+  testStatus: string;
+  owner: string;
+  approvalStatus: string;
+};
+
+export interface FormulaRegistry {
+  registry_version: string;
+  generated_at: string;
+  formulas: FormulaRegistryFormulasItem[];
+}
+
+export type GovernanceStatusSystemMode = typeof GovernanceStatusSystemMode[keyof typeof GovernanceStatusSystemMode];
+
+
+export const GovernanceStatusSystemMode = {
+  alert_paper: 'alert_paper',
+} as const;
+
+export type GovernanceStatusCoverage = {
+  current: number;
+  target: number;
+  coverage_pct: number;
+};
+
+export type GovernanceStatusValidation = {
+  data: string;
+  model: string;
+  investment: string;
+  execution: string;
+};
+
+export type GovernanceStatusFoundations = {
+  licensed_sources_registered: boolean;
+  point_in_time_facts: boolean;
+  corporate_actions: boolean;
+};
+
+export interface GovernanceStatus {
+  system_mode: GovernanceStatusSystemMode;
+  live_execution_enabled: boolean;
+  dataset_status: string;
+  coverage: GovernanceStatusCoverage;
+  validation: GovernanceStatusValidation;
+  foundations: GovernanceStatusFoundations;
+  generated_at: string;
+}
+
 export interface ErrorResponse {
   error: string;
 }
@@ -754,6 +811,99 @@ export interface PositionSizeResult {
   estimated_exit_days?: number | null;
 }
 
+export type PaperOrderIntentInputSide = typeof PaperOrderIntentInputSide[keyof typeof PaperOrderIntentInputSide];
+
+
+export const PaperOrderIntentInputSide = {
+  buy: 'buy',
+  sell: 'sell',
+} as const;
+
+export type PaperOrderIntentInputOrderType = typeof PaperOrderIntentInputOrderType[keyof typeof PaperOrderIntentInputOrderType];
+
+
+export const PaperOrderIntentInputOrderType = {
+  market: 'market',
+  limit: 'limit',
+} as const;
+
+export interface PaperOrderIntentInput {
+  isin: string;
+  side: PaperOrderIntentInputSide;
+  order_type?: PaperOrderIntentInputOrderType;
+  /** @minimum 1 */
+  quantity: number;
+  /** @nullable */
+  limit_price?: number | null;
+  idempotency_key: string;
+  /** @nullable */
+  rationale?: string | null;
+}
+
+export type PaperOrderIntentResponseExecutionMode = typeof PaperOrderIntentResponseExecutionMode[keyof typeof PaperOrderIntentResponseExecutionMode];
+
+
+export const PaperOrderIntentResponseExecutionMode = {
+  paper_only: 'paper_only',
+} as const;
+
+export interface PaperOrderIntentResponse {
+  id: number;
+  status: string;
+  execution_mode: PaperOrderIntentResponseExecutionMode;
+  live_execution_enabled: boolean;
+  duplicate?: boolean;
+}
+
+export type PaperOrderIntentSide = typeof PaperOrderIntentSide[keyof typeof PaperOrderIntentSide];
+
+
+export const PaperOrderIntentSide = {
+  buy: 'buy',
+  sell: 'sell',
+} as const;
+
+export type PaperOrderIntentOrderType = typeof PaperOrderIntentOrderType[keyof typeof PaperOrderIntentOrderType];
+
+
+export const PaperOrderIntentOrderType = {
+  market: 'market',
+  limit: 'limit',
+} as const;
+
+export interface PaperOrderIntent {
+  id: number;
+  idempotency_key: string;
+  isin: string;
+  ticker: string;
+  side: PaperOrderIntentSide;
+  order_type: PaperOrderIntentOrderType;
+  quantity: number;
+  /** @nullable */
+  limit_price?: number | null;
+  status: string;
+  /** @nullable */
+  rationale?: string | null;
+  created_by?: string;
+  /** @nullable */
+  approved_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PaperOrderIntentListExecutionMode = typeof PaperOrderIntentListExecutionMode[keyof typeof PaperOrderIntentListExecutionMode];
+
+
+export const PaperOrderIntentListExecutionMode = {
+  paper_only: 'paper_only',
+} as const;
+
+export interface PaperOrderIntentList {
+  items: PaperOrderIntent[];
+  total: number;
+  execution_mode: PaperOrderIntentListExecutionMode;
+}
+
 export type ResearchScoreCoverageTier = typeof ResearchScoreCoverageTier[keyof typeof ResearchScoreCoverageTier];
 
 
@@ -1400,6 +1550,11 @@ minScore?: number;
 
 export type GetDashboardAlertsParams = {
 limit?: number;
+};
+
+export type MarkDashboardAlertRead200 = {
+  id: number;
+  is_read: boolean;
 };
 
 export type GetRecentChangesParams = {

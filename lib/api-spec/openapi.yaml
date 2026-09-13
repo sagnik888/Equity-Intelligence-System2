@@ -31,6 +31,8 @@ tags:
     description: Dashboard aggregates and summary
   - name: audit
     description: Historical audit reconstruction
+  - name: governance
+    description: Formula registry, validation state, and execution controls
 
 paths:
   /healthz:
@@ -502,6 +504,40 @@ paths:
               schema:
                 $ref: "#/components/schemas/PositionSizeResult"
 
+  /portfolio/order-intents:
+    get:
+      operationId: listPaperOrderIntents
+      tags: [portfolio]
+      summary: List paper order intents
+      responses:
+        "200":
+          description: Paper order intents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaperOrderIntentList"
+    post:
+      operationId: createPaperOrderIntent
+      tags: [portfolio]
+      summary: Create a duplicate-safe paper order intent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaperOrderIntentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaperOrderIntentResponse"
+        "200":
+          description: Existing intent returned for duplicate idempotency key
+        "400":
+          description: Invalid order intent
+
   # ─── Research ─────────────────────────────────────────────────────────────────
   /research:
     get:
@@ -669,6 +705,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/AlertList"
 
+  /dashboard/alerts/{id}/read:
+    patch:
+      operationId: markDashboardAlertRead
+      tags: [dashboard]
+      summary: Acknowledge an alert
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Alert acknowledged
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, is_read]
+                properties:
+                  id: { type: integer }
+                  is_read: { type: boolean }
+
   /dashboard/sector-breakdown:
     get:
       operationId: getSectorBreakdown
@@ -723,6 +781,32 @@ paths:
               schema:
                 $ref: "#/components/schemas/AuditHistory"
 
+  /governance/formulas:
+    get:
+      operationId: listFormulaRegistry
+      tags: [governance]
+      summary: Versioned formula registry with governance metadata
+      responses:
+        "200":
+          description: Formula registry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FormulaRegistry"
+
+  /governance/status:
+    get:
+      operationId: getGovernanceStatus
+      tags: [governance]
+      summary: Data, model, investment, and execution validation status
+      responses:
+        "200":
+          description: Governance status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GovernanceStatus"
+
 components:
   schemas:
     HealthStatus:
@@ -730,6 +814,64 @@ components:
       required: [status]
       properties:
         status: { type: string }
+
+    FormulaRegistry:
+      type: object
+      required: [registry_version, formulas, generated_at]
+      properties:
+        registry_version: { type: string }
+        generated_at: { type: string, format: date-time }
+        formulas:
+          type: array
+          items:
+            type: object
+            required: [id, version, name, expression, variables, units, validRange, missingValueRule, zeroDivisionRule, testStatus, owner, approvalStatus]
+            properties:
+              id: { type: string }
+              version: { type: string }
+              name: { type: string }
+              expression: { type: string }
+              variables:
+                type: array
+                items: { type: string }
+              units: { type: string }
+              validRange: { type: string }
+              missingValueRule: { type: string }
+              zeroDivisionRule: { type: string }
+              testStatus: { type: string }
+              owner: { type: string }
+              approvalStatus: { type: string }
+
+    GovernanceStatus:
+      type: object
+      required: [system_mode, live_execution_enabled, dataset_status, coverage, validation, foundations, generated_at]
+      properties:
+        system_mode: { type: string, enum: [alert_paper] }
+        live_execution_enabled: { type: boolean }
+        dataset_status: { type: string }
+        coverage:
+          type: object
+          required: [current, target, coverage_pct]
+          properties:
+            current: { type: integer }
+            target: { type: integer }
+            coverage_pct: { type: number }
+        validation:
+          type: object
+          required: [data, model, investment, execution]
+          properties:
+            data: { type: string }
+            model: { type: string }
+            investment: { type: string }
+            execution: { type: string }
+        foundations:
+          type: object
+          required: [licensed_sources_registered, point_in_time_facts, corporate_actions]
+          properties:
+            licensed_sources_registered: { type: boolean }
+            point_in_time_facts: { type: boolean }
+            corporate_actions: { type: boolean }
+        generated_at: { type: string, format: date-time }
 
     ErrorResponse:
       type: object
@@ -1367,6 +1509,62 @@ components:
         risk_amount: { type: number }
         median_daily_traded_value_cr: { type: ["number", "null"] }
         estimated_exit_days: { type: ["number", "null"] }
+
+    PaperOrderIntentInput:
+      type: object
+      required: [isin, side, quantity, idempotency_key]
+      properties:
+        isin: { type: string }
+        side:
+          type: string
+          enum: [buy, sell]
+        order_type:
+          type: string
+          enum: [market, limit]
+          default: limit
+        quantity: { type: integer, minimum: 1 }
+        limit_price: { type: ["number", "null"] }
+        idempotency_key: { type: string }
+        rationale: { type: ["string", "null"] }
+
+    PaperOrderIntentResponse:
+      type: object
+      required: [id, status, execution_mode, live_execution_enabled]
+      properties:
+        id: { type: integer }
+        status: { type: string }
+        execution_mode: { type: string, enum: [paper_only] }
+        live_execution_enabled: { type: boolean }
+        duplicate: { type: boolean }
+
+    PaperOrderIntent:
+      type: object
+      required: [id, idempotency_key, isin, ticker, side, order_type, quantity, status, created_at, updated_at]
+      properties:
+        id: { type: integer }
+        idempotency_key: { type: string }
+        isin: { type: string }
+        ticker: { type: string }
+        side: { type: string, enum: [buy, sell] }
+        order_type: { type: string, enum: [market, limit] }
+        quantity: { type: integer }
+        limit_price: { type: ["number", "null"] }
+        status: { type: string }
+        rationale: { type: ["string", "null"] }
+        created_by: { type: string }
+        approved_by: { type: ["string", "null"] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    PaperOrderIntentList:
+      type: object
+      required: [items, total, execution_mode]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PaperOrderIntent" }
+        total: { type: integer }
+        execution_mode: { type: string, enum: [paper_only] }
 
     # ─── Research ─────────────────────────────────────────────────────────────
     ResearchScore:

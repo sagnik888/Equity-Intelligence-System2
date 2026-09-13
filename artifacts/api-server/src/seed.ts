@@ -13,6 +13,7 @@ import {
   signalsTable,
   signalHistoryTable,
   portfolioPositionsTable,
+  portfolioSettingsTable,
   researchScoresTable,
   evidenceLedgerTable,
   watchlistEntriesTable,
@@ -133,6 +134,7 @@ function signalState(hss: number): "strong_buy" | "buy" | "accumulate" | "watch"
 async function truncateAll() {
   const tables = [
     "recent_changes", "alerts", "watchlist_entries", "evidence_ledger",
+    "paper_order_intents", "portfolio_settings",
     "research_scores", "signal_history", "signals", "portfolio_positions",
     "hard_gates", "rankings", "score_history", "candidate_scores", "backtest_results", "securities",
   ];
@@ -334,6 +336,10 @@ async function seedSignals() {
 }
 
 async function seedPortfolio() {
+  await db.insert(portfolioSettingsTable).values({
+    id: 1, capital: "10000000", cashReservePct: "0.05",
+    operatingMode: "paper", liveExecutionEnabled: false, killSwitchEnabled: false,
+  });
   const positions = [
     { isin: "INE467B01029", ticker: "TCS", name: "Tata Consultancy Services", sector: "Technology", qty: 150, entry: 3720, current: 3970, stop: 3350, target: 4400, horizon: "long", status: "open", score: 88.4, signal: "strong_buy" },
     { isin: "INE009A01021", ticker: "INFY", name: "Infosys Ltd", sector: "Technology", qty: 300, entry: 1850, current: 1980, stop: 1670, target: 2200, horizon: "medium", status: "open", score: 82.1, signal: "buy" },

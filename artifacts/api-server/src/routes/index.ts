@@ -11,6 +11,7 @@ import watchlistsRouter from "./watchlists";
 import backtestRouter from "./backtest";
 import dashboardRouter from "./dashboard";
 import auditRouter from "./audit";
+import governanceRouter from "./governance";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(watchlistsRouter);
 router.use(backtestRouter);
 router.use(dashboardRouter);
 router.use(auditRouter);
+router.use(governanceRouter);
 
 export default router;

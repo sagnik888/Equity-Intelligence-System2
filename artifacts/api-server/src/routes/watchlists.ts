@@ -1,7 +1,14 @@
 import { Router, type IRouter } from "express";
-import { eq, sql, desc } from "drizzle-orm";
-import { db, watchlistEntriesTable, candidateScoresTable } from "@workspace/db";
-import { GetWatchlistParams } from "@workspace/api-zod";
+import { and, desc, isNull, gte } from "drizzle-orm";
+import {
+  db,
+  candidateScoresTable,
+  securitiesTable,
+  signalsTable,
+  hardGatesTable,
+  portfolioPositionsTable,
+  recentChangesTable,
+} from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -29,18 +36,12 @@ const WATCHLIST_META: Record<string, { display_name: string; description: string
 };
 
 router.get("/watchlists", async (_req, res): Promise<void> => {
-  const counts = await db.select({
-    watchlistName: watchlistEntriesTable.watchlistName,
-    count: sql<number>`count(*)`,
-  }).from(watchlistEntriesTable).groupBy(watchlistEntriesTable.watchlistName);
-
-  const countMap: Record<string, number> = {};
-  for (const r of counts) countMap[r.watchlistName] = Number(r.count);
+  const memberships = await deriveWatchlists();
 
   const watchlists = Object.entries(WATCHLIST_META).map(([name, meta]) => ({
     name,
     display_name: meta.display_name,
-    count: countMap[name] ?? 0,
+    count: memberships[name]?.size ?? 0,
     description: meta.description,
     category: meta.category,
   }));
@@ -53,19 +54,11 @@ router.get("/watchlists/:name", async (req, res): Promise<void> => {
   const meta = WATCHLIST_META[raw];
   if (!meta) { res.status(404).json({ error: "Watchlist not found" }); return; }
 
-  const entries = await db.select({
-    isin: watchlistEntriesTable.isin,
-  }).from(watchlistEntriesTable).where(eq(watchlistEntriesTable.watchlistName, raw));
-
-  const isins = entries.map(e => e.isin);
-
-  // Join with candidate scores
-  let items: any[] = [];
-  if (isins.length > 0) {
-    const scores = await db.select().from(candidateScoresTable)
-      .orderBy(desc(candidateScoresTable.candidateScore));
-    items = scores
-      .filter(s => isins.includes(s.isin))
+  const memberships = await deriveWatchlists();
+  const isins = memberships[raw] ?? new Set<string>();
+  const scores = await db.select().from(candidateScoresTable).orderBy(desc(candidateScoresTable.candidateScore));
+  const items = scores
+      .filter(s => isins.has(s.isin))
       .map(s => ({
         isin: s.isin,
         ticker: s.ticker,
@@ -84,7 +77,6 @@ router.get("/watchlists/:name", async (req, res): Promise<void> => {
         overall_rank: s.overallRank ?? null,
         score_date: s.scoreDate,
       }));
-  }
 
   res.json({
     name: raw,
@@ -93,5 +85,62 @@ router.get("/watchlists/:name", async (req, res): Promise<void> => {
     total: items.length,
   });
 });
+
+async function deriveWatchlists(): Promise<Record<string, Set<string>>> {
+  const [scores, securities, signals, gates, positions, changes] = await Promise.all([
+    db.select().from(candidateScoresTable),
+    db.select().from(securitiesTable),
+    db.select().from(signalsTable),
+    db.select().from(hardGatesTable).where(isNull(hardGatesTable.resolvedAt)),
+    db.select().from(portfolioPositionsTable).where(isNull(portfolioPositionsTable.exitDate)),
+    db.select().from(recentChangesTable),
+  ]);
+  const result: Record<string, Set<string>> = {};
+  for (const name of Object.keys(WATCHLIST_META)) result[name] = new Set();
+  const n = (value: string | null) => value == null ? null : Number(value);
+  const score = new Map(scores.map(s => [s.isin, s]));
+  const security = new Map(securities.map(s => [s.isin, s]));
+  const signalByIsin = new Map<string, typeof signals>();
+  for (const signal of signals) signalByIsin.set(signal.isin, [...(signalByIsin.get(signal.isin) ?? []), signal]);
+  const gateByIsin = new Map<string, typeof gates>();
+  for (const gate of gates) gateByIsin.set(gate.isin, [...(gateByIsin.get(gate.isin) ?? []), gate]);
+  const recentCutoff = new Date(Date.now() - 5 * 86400000);
+
+  for (const s of scores) {
+    const q = n(s.qualityScore) ?? 50;
+    const g = n(s.growthScore) ?? 50;
+    const v = n(s.valueScore) ?? 50;
+    const b = n(s.balanceSheetScore) ?? 50;
+    const i = n(s.integrityScore) ?? 50;
+    const candidate = n(s.candidateScore) ?? 0;
+    const dc = n(s.dataConfidence) ?? 0;
+    const sec = security.get(s.isin);
+    const stockSignals = signalByIsin.get(s.isin) ?? [];
+    const activeGates = gateByIsin.get(s.isin) ?? [];
+    const buySignal = stockSignals.some(x => ["strong_buy", "buy", "accumulate"].includes(x.state));
+    const negativeSignal = stockSignals.some(x => ["reduce", "sell", "avoid"].includes(x.state));
+    const isRecentListing = !!sec?.listingDate && new Date(sec.listingDate) >= new Date(Date.now() - 30 * 86400000);
+    if (candidate >= 75) result.elite_candidates.add(s.isin);
+    if (q >= 70 && v >= 55) result.quality_at_reasonable_value.add(s.isin);
+    if (["mid_cap", "small_cap"].includes(s.universeGroup) && g >= 65 && q >= 55) result.emerging_compounders.add(s.isin);
+    if (g >= 70) result.earnings_improvers.add(s.isin);
+    if (q >= 65 && candidate >= 55) result.cashflow_improvers.add(s.isin);
+    if (candidate >= 40 && candidate <= 65 && g >= 55) result.turnaround_watch.add(s.isin);
+    if (v >= 75) result.deep_value.add(s.isin);
+    if (v >= 70 && q < 50) result.value_traps.add(s.isin);
+    if (i < 50 || activeGates.some(x => /GOVERNANCE|AUDITOR|PROMOTER/i.test(x.trigger))) result.governance_deterioration.add(s.isin);
+    if (b < 50 || activeGates.some(x => /DEBT|LIQUIDITY|COVENANT/i.test(x.trigger))) result.balance_sheet_risk.add(s.isin);
+    if (v < 40) result.overvaluation.add(s.isin);
+    if (buySignal && stockSignals.some(x => x.horizon === "monthly" || x.horizon === "long")) result.momentum_confirmation.add(s.isin);
+    if ((n(sec?.medianDailyTradedValueCr ?? null) ?? 0) < 5) result.liquidity_deterioration.add(s.isin);
+    if (isRecentListing) result.new_listings.add(s.isin);
+    if (activeGates.some(x => x.state === "pending_resolution" || x.level === 1)) result.pending_resolution.add(s.isin);
+    if (dc < 60) result.insufficient_data.add(s.isin);
+    if (changes.some(x => x.isin === s.isin && new Date(x.changedAt) >= recentCutoff && /upgrade|improvement/i.test(x.changeType))) result.recent_upgrades.add(s.isin);
+    if (changes.some(x => x.isin === s.isin && new Date(x.changedAt) >= recentCutoff && /downgrade|deterioration/i.test(x.changeType))) result.recent_downgrades.add(s.isin);
+    if (negativeSignal && positions.some(x => x.isin === s.isin)) result.portfolio_review_required.add(s.isin);
+  }
+  return result;
+}
 
 export default router;

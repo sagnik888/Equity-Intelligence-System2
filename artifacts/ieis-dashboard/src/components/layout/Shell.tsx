@@ -16,7 +16,7 @@ const NAV_ITEMS = [
   { path: "/signals",    label: "Signals",      icon: Zap,             hint: "5 horizons" },
   { path: "/rankings",   label: "Rankings",     icon: BarChart3,       hint: "17 dimensions" },
   { path: "/hardgates",  label: "Hard Gates",   icon: ShieldAlert,     hint: "Exclusion engine" },
-  { path: "/portfolio",  label: "Portfolio",    icon: Briefcase,       hint: "Paper + live" },
+   { path: "/portfolio",  label: "Portfolio",    icon: Briefcase,       hint: "Paper only" },
   { path: "/research",   label: "Research",     icon: Microscope,      hint: "Deep coverage" },
   { path: "/watchlists", label: "Watchlists",   icon: BookMarked,      hint: "Smart lists" },
   { path: "/backtest",   label: "Backtest",     icon: FlaskConical,    hint: "Walk-forward" },
@@ -81,9 +81,9 @@ export function Shell({ children }: { children: ReactNode }) {
               <Badge variant="destructive" className="h-4 text-[10px] px-1.5 py-0">{unreadCount}</Badge>
             )}
           </div>
-          <div className="mt-2 flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] text-muted-foreground">All systems nominal</span>
+           <div className="mt-2 flex items-center gap-1.5">
+             <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+             <span className="text-[10px] text-muted-foreground">Alert + paper · live disabled</span>
           </div>
         </div>
       </aside>

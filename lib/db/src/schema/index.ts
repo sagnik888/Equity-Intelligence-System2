@@ -3,6 +3,7 @@ export * from "./scores";
 export * from "./hardgates";
 export * from "./signals";
 export * from "./portfolio";
+export * from "./governance";
 export * from "./research";
 export * from "./watchlists";
 export * from "./backtest";
