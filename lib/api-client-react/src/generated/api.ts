@@ -20,23 +20,29 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AcceptanceGateList,
   AlertList,
   AuditHistory,
   BacktestResult,
   BacktestResultList,
   CandidateScoreList,
+  ConnectorHealth,
   DashboardSummary,
+  DataLicenseList,
   ErrorResponse,
   EvidenceLedger,
   FactorAnalysis,
+  FeatureDefinitionList,
   FormulaRegistry,
   GetDashboardAlertsParams,
   GetRecentChangesParams,
   GetTopBuySignalsParams,
+  GovernanceSettings,
   GovernanceStatus,
   HardGateList,
   HardGateSummary,
   HealthStatus,
+  JobList,
   ListCandidateScoresParams,
   ListHardGatesParams,
   ListRankingsParams,
@@ -45,6 +51,7 @@ import type {
   ListSignalsParams,
   ListSuitabilityScoresParams,
   MarkDashboardAlertRead200,
+  ModelRegistryList,
   PaperOrderIntentInput,
   PaperOrderIntentList,
   PaperOrderIntentResponse,
@@ -59,6 +66,7 @@ import type {
   RecentChangeList,
   ResearchDetail,
   ResearchScoreList,
+  ResourceState,
   ScoreDistribution,
   SectorBreakdown,
   SecurityDetail,
@@ -3287,6 +3295,622 @@ export function useGetGovernanceStatus<TData = Awaited<ReturnType<typeof getGove
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetGovernanceStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetGovernanceSettingsUrl = () => {
+
+
+
+
+  return `/api/governance/settings`
+}
+
+/**
+ * @summary Get persisted deployment and safety settings
+ */
+export const getGovernanceSettings = async ( options?: RequestInit): Promise<GovernanceSettings> => {
+
+  return customFetch<GovernanceSettings>(getGetGovernanceSettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGovernanceSettingsQueryKey = () => {
+    return [
+    `/api/governance/settings`
+    ] as const;
+    }
+
+
+export const getGetGovernanceSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getGovernanceSettings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGovernanceSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGovernanceSettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGovernanceSettings>>> = ({ signal }) => getGovernanceSettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGovernanceSettings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGovernanceSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getGovernanceSettings>>>
+export type GetGovernanceSettingsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get persisted deployment and safety settings
+ */
+
+export function useGetGovernanceSettings<TData = Awaited<ReturnType<typeof getGovernanceSettings>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGovernanceSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGovernanceSettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListDataLicensesUrl = () => {
+
+
+
+
+  return `/api/governance/licenses`
+}
+
+/**
+ * @summary List data-license registrations and permitted-use state
+ */
+export const listDataLicenses = async ( options?: RequestInit): Promise<DataLicenseList> => {
+
+  return customFetch<DataLicenseList>(getListDataLicensesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDataLicensesQueryKey = () => {
+    return [
+    `/api/governance/licenses`
+    ] as const;
+    }
+
+
+export const getListDataLicensesQueryOptions = <TData = Awaited<ReturnType<typeof listDataLicenses>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDataLicenses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDataLicensesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDataLicenses>>> = ({ signal }) => listDataLicenses({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDataLicenses>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDataLicensesQueryResult = NonNullable<Awaited<ReturnType<typeof listDataLicenses>>>
+export type ListDataLicensesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List data-license registrations and permitted-use state
+ */
+
+export function useListDataLicenses<TData = Awaited<ReturnType<typeof listDataLicenses>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDataLicenses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDataLicensesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListConnectorHealthUrl = () => {
+
+
+
+
+  return `/api/governance/connectors`
+}
+
+/**
+ * @summary List source adapters and recent request health
+ */
+export const listConnectorHealth = async ( options?: RequestInit): Promise<ConnectorHealth> => {
+
+  return customFetch<ConnectorHealth>(getListConnectorHealthUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListConnectorHealthQueryKey = () => {
+    return [
+    `/api/governance/connectors`
+    ] as const;
+    }
+
+
+export const getListConnectorHealthQueryOptions = <TData = Awaited<ReturnType<typeof listConnectorHealth>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConnectorHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListConnectorHealthQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listConnectorHealth>>> = ({ signal }) => listConnectorHealth({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listConnectorHealth>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListConnectorHealthQueryResult = NonNullable<Awaited<ReturnType<typeof listConnectorHealth>>>
+export type ListConnectorHealthQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List source adapters and recent request health
+ */
+
+export function useListConnectorHealth<TData = Awaited<ReturnType<typeof listConnectorHealth>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConnectorHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListConnectorHealthQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListModelRegistryUrl = () => {
+
+
+
+
+  return `/api/governance/models`
+}
+
+/**
+ * @summary List formula and model registry entries
+ */
+export const listModelRegistry = async ( options?: RequestInit): Promise<ModelRegistryList> => {
+
+  return customFetch<ModelRegistryList>(getListModelRegistryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListModelRegistryQueryKey = () => {
+    return [
+    `/api/governance/models`
+    ] as const;
+    }
+
+
+export const getListModelRegistryQueryOptions = <TData = Awaited<ReturnType<typeof listModelRegistry>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModelRegistry>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListModelRegistryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listModelRegistry>>> = ({ signal }) => listModelRegistry({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listModelRegistry>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListModelRegistryQueryResult = NonNullable<Awaited<ReturnType<typeof listModelRegistry>>>
+export type ListModelRegistryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List formula and model registry entries
+ */
+
+export function useListModelRegistry<TData = Awaited<ReturnType<typeof listModelRegistry>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModelRegistry>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListModelRegistryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListFeatureDefinitionsUrl = () => {
+
+
+
+
+  return `/api/governance/features`
+}
+
+/**
+ * @summary List versioned feature definitions
+ */
+export const listFeatureDefinitions = async ( options?: RequestInit): Promise<FeatureDefinitionList> => {
+
+  return customFetch<FeatureDefinitionList>(getListFeatureDefinitionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFeatureDefinitionsQueryKey = () => {
+    return [
+    `/api/governance/features`
+    ] as const;
+    }
+
+
+export const getListFeatureDefinitionsQueryOptions = <TData = Awaited<ReturnType<typeof listFeatureDefinitions>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFeatureDefinitions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFeatureDefinitionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFeatureDefinitions>>> = ({ signal }) => listFeatureDefinitions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFeatureDefinitions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFeatureDefinitionsQueryResult = NonNullable<Awaited<ReturnType<typeof listFeatureDefinitions>>>
+export type ListFeatureDefinitionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List versioned feature definitions
+ */
+
+export function useListFeatureDefinitions<TData = Awaited<ReturnType<typeof listFeatureDefinitions>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFeatureDefinitions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFeatureDefinitionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAcceptanceGatesUrl = () => {
+
+
+
+
+  return `/api/governance/gates`
+}
+
+/**
+ * @summary List release and safety acceptance gates
+ */
+export const listAcceptanceGates = async ( options?: RequestInit): Promise<AcceptanceGateList> => {
+
+  return customFetch<AcceptanceGateList>(getListAcceptanceGatesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAcceptanceGatesQueryKey = () => {
+    return [
+    `/api/governance/gates`
+    ] as const;
+    }
+
+
+export const getListAcceptanceGatesQueryOptions = <TData = Awaited<ReturnType<typeof listAcceptanceGates>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAcceptanceGates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAcceptanceGatesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAcceptanceGates>>> = ({ signal }) => listAcceptanceGates({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAcceptanceGates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAcceptanceGatesQueryResult = NonNullable<Awaited<ReturnType<typeof listAcceptanceGates>>>
+export type ListAcceptanceGatesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List release and safety acceptance gates
+ */
+
+export function useListAcceptanceGates<TData = Awaited<ReturnType<typeof listAcceptanceGates>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAcceptanceGates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAcceptanceGatesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetResourceStateUrl = () => {
+
+
+
+
+  return `/api/governance/resources`
+}
+
+/**
+ * @summary Get latest resource governor state and history
+ */
+export const getResourceState = async ( options?: RequestInit): Promise<ResourceState> => {
+
+  return customFetch<ResourceState>(getGetResourceStateUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResourceStateQueryKey = () => {
+    return [
+    `/api/governance/resources`
+    ] as const;
+    }
+
+
+export const getGetResourceStateQueryOptions = <TData = Awaited<ReturnType<typeof getResourceState>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResourceState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResourceStateQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResourceState>>> = ({ signal }) => getResourceState({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResourceState>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResourceStateQueryResult = NonNullable<Awaited<ReturnType<typeof getResourceState>>>
+export type GetResourceStateQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get latest resource governor state and history
+ */
+
+export function useGetResourceState<TData = Awaited<ReturnType<typeof getResourceState>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResourceState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResourceStateQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListGovernanceJobsUrl = () => {
+
+
+
+
+  return `/api/governance/jobs`
+}
+
+/**
+ * @summary List scheduled and running system jobs
+ */
+export const listGovernanceJobs = async ( options?: RequestInit): Promise<JobList> => {
+
+  return customFetch<JobList>(getListGovernanceJobsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGovernanceJobsQueryKey = () => {
+    return [
+    `/api/governance/jobs`
+    ] as const;
+    }
+
+
+export const getListGovernanceJobsQueryOptions = <TData = Awaited<ReturnType<typeof listGovernanceJobs>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGovernanceJobs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGovernanceJobsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGovernanceJobs>>> = ({ signal }) => listGovernanceJobs({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGovernanceJobs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGovernanceJobsQueryResult = NonNullable<Awaited<ReturnType<typeof listGovernanceJobs>>>
+export type ListGovernanceJobsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List scheduled and running system jobs
+ */
+
+export function useListGovernanceJobs<TData = Awaited<ReturnType<typeof listGovernanceJobs>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGovernanceJobs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGovernanceJobsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -16,6 +16,7 @@ import Research from '@/pages/Research';
 import Watchlists from '@/pages/Watchlists';
 import Backtest from '@/pages/Backtest';
 import Audit from '@/pages/Audit';
+import Governance from '@/pages/Governance';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,6 +42,7 @@ function Router() {
         <Route path="/watchlists" component={Watchlists} />
         <Route path="/backtest" component={Backtest} />
         <Route path="/audit" component={Audit} />
+        <Route path="/governance" component={Governance} />
         <Route component={NotFound} />
       </Switch>
     </Shell>

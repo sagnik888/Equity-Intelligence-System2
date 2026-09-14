@@ -9,11 +9,14 @@ export interface HealthStatus {
   status: string;
 }
 
+export type FormulaRegistryFormulasItemMachineExpression = { [key: string]: unknown };
+
 export type FormulaRegistryFormulasItem = {
   id: string;
   version: string;
   name: string;
   expression: string;
+  machineExpression?: FormulaRegistryFormulasItemMachineExpression;
   variables: string[];
   units: string;
   validRange: string;
@@ -30,13 +33,6 @@ export interface FormulaRegistry {
   formulas: FormulaRegistryFormulasItem[];
 }
 
-export type GovernanceStatusSystemMode = typeof GovernanceStatusSystemMode[keyof typeof GovernanceStatusSystemMode];
-
-
-export const GovernanceStatusSystemMode = {
-  alert_paper: 'alert_paper',
-} as const;
-
 export type GovernanceStatusCoverage = {
   current: number;
   target: number;
@@ -44,7 +40,9 @@ export type GovernanceStatusCoverage = {
 };
 
 export type GovernanceStatusValidation = {
+  architecture: string;
   data: string;
+  code: string;
   model: string;
   investment: string;
   execution: string;
@@ -52,18 +50,87 @@ export type GovernanceStatusValidation = {
 
 export type GovernanceStatusFoundations = {
   licensed_sources_registered: boolean;
+  source_adapters_registered: boolean;
   point_in_time_facts: boolean;
   corporate_actions: boolean;
+  acceptance_gates_registered: boolean;
 };
 
+export type GovernanceStatusResources = { [key: string]: unknown } | null;
+
 export interface GovernanceStatus {
-  system_mode: GovernanceStatusSystemMode;
+  system_mode: string;
+  deployment_profile: string;
   live_execution_enabled: boolean;
+  kill_switch_enabled: boolean;
   dataset_status: string;
   coverage: GovernanceStatusCoverage;
   validation: GovernanceStatusValidation;
   foundations: GovernanceStatusFoundations;
+  resources?: GovernanceStatusResources;
   generated_at: string;
+}
+
+export interface GovernanceSettings {
+  id: number;
+  profile: string;
+  operatingMode: string;
+  liveExecutionEnabled: boolean;
+  killSwitchEnabled: boolean;
+  [key: string]: unknown;
+ }
+
+export type DataLicenseListLicensesItem = { [key: string]: unknown };
+
+export interface DataLicenseList {
+  licenses: DataLicenseListLicensesItem[];
+  count: number;
+}
+
+export type ConnectorHealthAdaptersItem = { [key: string]: unknown };
+
+export type ConnectorHealthRecentRequestsItem = { [key: string]: unknown };
+
+export interface ConnectorHealth {
+  adapters: ConnectorHealthAdaptersItem[];
+  recent_requests: ConnectorHealthRecentRequestsItem[];
+}
+
+export type ModelRegistryListModelsItem = { [key: string]: unknown };
+
+export interface ModelRegistryList {
+  models: ModelRegistryListModelsItem[];
+  count: number;
+}
+
+export type FeatureDefinitionListFeaturesItem = { [key: string]: unknown };
+
+export interface FeatureDefinitionList {
+  features: FeatureDefinitionListFeaturesItem[];
+  count: number;
+}
+
+export type AcceptanceGateListGatesItem = { [key: string]: unknown };
+
+export interface AcceptanceGateList {
+  gates: AcceptanceGateListGatesItem[];
+  count: number;
+}
+
+export type ResourceStateCurrent = { [key: string]: unknown } | null;
+
+export type ResourceStateHistoryItem = { [key: string]: unknown };
+
+export interface ResourceState {
+  current: ResourceStateCurrent;
+  history: ResourceStateHistoryItem[];
+}
+
+export type JobListJobsItem = { [key: string]: unknown };
+
+export interface JobList {
+  jobs: JobListJobsItem[];
+  count: number;
 }
 
 export interface ErrorResponse {

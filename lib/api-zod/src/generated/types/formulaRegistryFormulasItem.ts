@@ -5,12 +5,14 @@
  * Indian Equity Intelligence System API
  * OpenAPI spec version: 0.1.0
  */
+import type { FormulaRegistryFormulasItemMachineExpression } from './formulaRegistryFormulasItemMachineExpression';
 
 export type FormulaRegistryFormulasItem = {
   id: string;
   version: string;
   name: string;
   expression: string;
+  machineExpression?: FormulaRegistryFormulasItemMachineExpression;
   variables: string[];
   units: string;
   validRange: string;

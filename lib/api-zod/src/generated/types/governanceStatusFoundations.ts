@@ -8,6 +8,8 @@
 
 export type GovernanceStatusFoundations = {
   licensed_sources_registered: boolean;
+  source_adapters_registered: boolean;
   point_in_time_facts: boolean;
   corporate_actions: boolean;
+  acceptance_gates_registered: boolean;
 };

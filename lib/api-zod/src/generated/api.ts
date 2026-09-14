@@ -1352,6 +1352,7 @@ export const ListFormulaRegistryResponse = zod.object({
   "version": zod.string(),
   "name": zod.string(),
   "expression": zod.string(),
+  "machineExpression": zod.record(zod.string(), zod.unknown()).optional(),
   "variables": zod.array(zod.string()),
   "units": zod.string(),
   "validRange": zod.string(),
@@ -1368,8 +1369,10 @@ export const ListFormulaRegistryResponse = zod.object({
  * @summary Data, model, investment, and execution validation status
  */
 export const GetGovernanceStatusResponse = zod.object({
-  "system_mode": zod.enum(['alert_paper']),
+  "system_mode": zod.string(),
+  "deployment_profile": zod.string(),
   "live_execution_enabled": zod.boolean(),
+  "kill_switch_enabled": zod.boolean(),
   "dataset_status": zod.string(),
   "coverage": zod.object({
   "current": zod.number(),
@@ -1377,17 +1380,97 @@ export const GetGovernanceStatusResponse = zod.object({
   "coverage_pct": zod.number()
 }),
   "validation": zod.object({
+  "architecture": zod.string(),
   "data": zod.string(),
+  "code": zod.string(),
   "model": zod.string(),
   "investment": zod.string(),
   "execution": zod.string()
 }),
   "foundations": zod.object({
   "licensed_sources_registered": zod.boolean(),
+  "source_adapters_registered": zod.boolean(),
   "point_in_time_facts": zod.boolean(),
-  "corporate_actions": zod.boolean()
+  "corporate_actions": zod.boolean(),
+  "acceptance_gates_registered": zod.boolean()
 }),
+  "resources": zod.record(zod.string(), zod.unknown()).nullish(),
   "generated_at": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get persisted deployment and safety settings
+ */
+export const GetGovernanceSettingsResponse = zod.object({
+  "id": zod.number(),
+  "profile": zod.string(),
+  "operatingMode": zod.string(),
+  "liveExecutionEnabled": zod.boolean(),
+  "killSwitchEnabled": zod.boolean()
+})
+
+
+/**
+ * @summary List data-license registrations and permitted-use state
+ */
+export const ListDataLicensesResponse = zod.object({
+  "licenses": zod.array(zod.record(zod.string(), zod.unknown())),
+  "count": zod.number()
+})
+
+
+/**
+ * @summary List source adapters and recent request health
+ */
+export const ListConnectorHealthResponse = zod.object({
+  "adapters": zod.array(zod.record(zod.string(), zod.unknown())),
+  "recent_requests": zod.array(zod.record(zod.string(), zod.unknown()))
+})
+
+
+/**
+ * @summary List formula and model registry entries
+ */
+export const ListModelRegistryResponse = zod.object({
+  "models": zod.array(zod.record(zod.string(), zod.unknown())),
+  "count": zod.number()
+})
+
+
+/**
+ * @summary List versioned feature definitions
+ */
+export const ListFeatureDefinitionsResponse = zod.object({
+  "features": zod.array(zod.record(zod.string(), zod.unknown())),
+  "count": zod.number()
+})
+
+
+/**
+ * @summary List release and safety acceptance gates
+ */
+export const ListAcceptanceGatesResponse = zod.object({
+  "gates": zod.array(zod.record(zod.string(), zod.unknown())),
+  "count": zod.number()
+})
+
+
+/**
+ * @summary Get latest resource governor state and history
+ */
+export const GetResourceStateResponse = zod.object({
+  "current": zod.record(zod.string(), zod.unknown()).nullable(),
+  "history": zod.array(zod.record(zod.string(), zod.unknown()))
+})
+
+
+/**
+ * @summary List scheduled and running system jobs
+ */
+export const ListGovernanceJobsResponse = zod.object({
+  "jobs": zod.array(zod.record(zod.string(), zod.unknown())),
+  "count": zod.number()
 })
 
 

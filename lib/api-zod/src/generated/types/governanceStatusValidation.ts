@@ -7,7 +7,9 @@
  */
 
 export type GovernanceStatusValidation = {
+  architecture: string;
   data: string;
+  code: string;
   model: string;
   investment: string;
   execution: string;

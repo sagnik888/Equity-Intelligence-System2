@@ -20,6 +20,12 @@ import {
   backtestResultsTable,
   alertsTable,
   recentChangesTable,
+  systemSettingsTable,
+  connectorAdaptersTable,
+  featureDefinitionsTable,
+  modelRegistryTable,
+  resourceSnapshotsTable,
+  acceptanceGatesTable,
 } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { calculateCandidateScore } from "./lib/scoring";
@@ -133,6 +139,9 @@ function signalState(hss: number): "strong_buy" | "buy" | "accumulate" | "watch"
 
 async function truncateAll() {
   const tables = [
+    "immutable_audit_logs", "acceptance_gates", "jobs", "resource_snapshots",
+    "model_registry", "feature_definitions", "raw_data_records", "connector_requests",
+    "connector_adapters", "data_licenses", "system_settings",
     "recent_changes", "alerts", "watchlist_entries", "evidence_ledger",
     "paper_order_intents", "portfolio_settings",
     "research_scores", "signal_history", "signals", "portfolio_positions",
@@ -142,6 +151,85 @@ async function truncateAll() {
     await db.execute(sql.raw(`TRUNCATE TABLE "${t}" RESTART IDENTITY CASCADE`));
   }
   console.log("✓ Truncated all tables");
+}
+
+async function seedControls() {
+  await db.insert(systemSettingsTable).values({
+    id: 1,
+    profile: "personal_core",
+    operatingMode: "alert_only",
+    timezone: "Asia/Kolkata",
+    benchmark: "NIFTY 500",
+    baseCurrency: "INR",
+    tradingCalendar: "NSE",
+    includeSme: false,
+    includeNewListings: true,
+    includeFno: false,
+    minimumDataConfidence: "70",
+    liveExecutionEnabled: false,
+    killSwitchEnabled: false,
+  });
+
+  await db.insert(featureDefinitionsTable).values([
+    {
+      featureId: "data_confidence",
+      featureVersion: "2.0",
+      featureName: "Weighted data confidence",
+      economicDefinition: "Confidence in the completeness, timeliness, and source quality of the supporting data.",
+      plainTextFormula: "weighted component confidence with coverage shrinkage",
+      sourceFields: ["point_in_time_facts", "data_sources", "corporate_actions"],
+      scopes: ["security", "company"],
+      sectorApplicability: ["all"],
+      missingRule: "unavailable inputs reduce confidence; no silent defaults",
+      stalenessRule: "apply stale penalty after configured source-specific threshold",
+      outputUnit: "score 0..100",
+      dataType: "decimal",
+      owner: "IEIS Governance",
+      approvalStatus: "approved",
+    },
+    {
+      featureId: "candidate_score",
+      featureVersion: "2.0",
+      featureName: "Candidate score",
+      economicDefinition: "Coverage-shrunk multi-factor opportunity score subject to hard-gate caps.",
+      plainTextFormula: "clip(min(50+(raw-50)*(DC/100), HardGateCap),0,100)",
+      sourceFields: ["candidate_score_inputs", "hard_gates"],
+      scopes: ["security"],
+      sectorApplicability: ["all"],
+      missingRule: "pending review when required inputs are missing",
+      negativeBaseRule: "metric-specific rule; never substitute a fabricated value",
+      outputUnit: "score 0..100",
+      dataType: "decimal",
+      owner: "IEIS Research",
+      approvalStatus: "approved",
+    },
+  ]);
+
+  await db.insert(modelRegistryTable).values({
+    modelId: "ieis-formula-registry",
+    modelVersion: "7.2",
+    featureVersions: { data_confidence: "2.0", candidate_score: "2.0" },
+    hardGateVersion: "7.2",
+    approvalStatus: "approved",
+    deploymentDate: new Date(),
+    mode: "champion",
+    comparisonSummary: { dataset: "seeded_demo", investmentValidated: false },
+  });
+
+  await db.insert(acceptanceGatesTable).values([
+    { gateKey: "architecture", gateName: "Architecture validated", category: "release", status: "healthy", checkedAt: new Date(), checkedBy: "system", notes: "Contract and workflow checks passed." },
+    { gateKey: "code", gateName: "Code validated", category: "release", status: "healthy", checkedAt: new Date(), checkedBy: "system", notes: "Typecheck and build checks passed." },
+    { gateKey: "data", gateName: "Data validated", category: "release", status: "warning", checkedAt: new Date(), checkedBy: "system", notes: "Demo dataset only; licensed source and PIT coverage are not configured." },
+    { gateKey: "investment", gateName: "Investment validated", category: "release", status: "not_configured", checkedAt: new Date(), checkedBy: "system", notes: "No production walk-forward validation has been approved." },
+    { gateKey: "execution", gateName: "Execution readiness", category: "safety", status: "warning", checkedAt: new Date(), checkedBy: "system", notes: "Alert and paper modes only; live execution remains disabled." },
+  ]);
+
+  await db.insert(resourceSnapshotsTable).values({
+    mode: "normal",
+    marketOpen: false,
+    actions: ["live execution disabled", "demo data retained"],
+  });
+  console.log("✓ Seeded control registries and release gates");
 }
 
 async function seedSecurities() {
@@ -563,6 +651,7 @@ async function seedAlertsAndChanges() {
 async function main() {
   console.log("🌱 Seeding IEIS v7.2 database…");
   await truncateAll();
+  await seedControls();
   await seedSecurities();
   await seedScores();
   await seedHardGates();

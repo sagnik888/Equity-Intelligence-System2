@@ -8,3 +8,5 @@ export * from "./research";
 export * from "./watchlists";
 export * from "./backtest";
 export * from "./alerts";
+export * from "./controls";
+export * from "./entity-history";

@@ -32,7 +32,7 @@ tags:
   - name: audit
     description: Historical audit reconstruction
   - name: governance
-    description: Formula registry, validation state, and execution controls
+    description: Formula registry, validation state, source rights, resources, and execution controls
 
 paths:
   /healthz:
@@ -807,6 +807,102 @@ paths:
               schema:
                 $ref: "#/components/schemas/GovernanceStatus"
 
+  /governance/settings:
+    get:
+      operationId: getGovernanceSettings
+      tags: [governance]
+      summary: Get persisted deployment and safety settings
+      responses:
+        "200":
+          description: Governance settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GovernanceSettings" }
+
+  /governance/licenses:
+    get:
+      operationId: listDataLicenses
+      tags: [governance]
+      summary: List data-license registrations and permitted-use state
+      responses:
+        "200":
+          description: Data licenses
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataLicenseList" }
+
+  /governance/connectors:
+    get:
+      operationId: listConnectorHealth
+      tags: [governance]
+      summary: List source adapters and recent request health
+      responses:
+        "200":
+          description: Connector health
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConnectorHealth" }
+
+  /governance/models:
+    get:
+      operationId: listModelRegistry
+      tags: [governance]
+      summary: List formula and model registry entries
+      responses:
+        "200":
+          description: Model registry
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ModelRegistryList" }
+
+  /governance/features:
+    get:
+      operationId: listFeatureDefinitions
+      tags: [governance]
+      summary: List versioned feature definitions
+      responses:
+        "200":
+          description: Feature definitions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FeatureDefinitionList" }
+
+  /governance/gates:
+    get:
+      operationId: listAcceptanceGates
+      tags: [governance]
+      summary: List release and safety acceptance gates
+      responses:
+        "200":
+          description: Acceptance gates
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AcceptanceGateList" }
+
+  /governance/resources:
+    get:
+      operationId: getResourceState
+      tags: [governance]
+      summary: Get latest resource governor state and history
+      responses:
+        "200":
+          description: Resource state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResourceState" }
+
+  /governance/jobs:
+    get:
+      operationId: listGovernanceJobs
+      tags: [governance]
+      summary: List scheduled and running system jobs
+      responses:
+        "200":
+          description: Jobs
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JobList" }
+
 components:
   schemas:
     HealthStatus:
@@ -831,6 +927,7 @@ components:
               version: { type: string }
               name: { type: string }
               expression: { type: string }
+              machineExpression: { type: object, additionalProperties: true }
               variables:
                 type: array
                 items: { type: string }
@@ -844,10 +941,12 @@ components:
 
     GovernanceStatus:
       type: object
-      required: [system_mode, live_execution_enabled, dataset_status, coverage, validation, foundations, generated_at]
+      required: [system_mode, deployment_profile, live_execution_enabled, kill_switch_enabled, dataset_status, coverage, validation, foundations, generated_at]
       properties:
-        system_mode: { type: string, enum: [alert_paper] }
+        system_mode: { type: string }
+        deployment_profile: { type: string }
         live_execution_enabled: { type: boolean }
+        kill_switch_enabled: { type: boolean }
         dataset_status: { type: string }
         coverage:
           type: object
@@ -858,20 +957,91 @@ components:
             coverage_pct: { type: number }
         validation:
           type: object
-          required: [data, model, investment, execution]
+          required: [architecture, data, code, model, investment, execution]
           properties:
+            architecture: { type: string }
             data: { type: string }
+            code: { type: string }
             model: { type: string }
             investment: { type: string }
             execution: { type: string }
         foundations:
           type: object
-          required: [licensed_sources_registered, point_in_time_facts, corporate_actions]
+          required: [licensed_sources_registered, source_adapters_registered, point_in_time_facts, corporate_actions, acceptance_gates_registered]
           properties:
             licensed_sources_registered: { type: boolean }
+            source_adapters_registered: { type: boolean }
             point_in_time_facts: { type: boolean }
             corporate_actions: { type: boolean }
+            acceptance_gates_registered: { type: boolean }
+        resources:
+          nullable: true
+          type: object
+          additionalProperties: true
         generated_at: { type: string, format: date-time }
+
+    GovernanceSettings:
+      type: object
+      additionalProperties: true
+      required: [id, profile, operatingMode, liveExecutionEnabled, killSwitchEnabled]
+      properties:
+        id: { type: integer }
+        profile: { type: string }
+        operatingMode: { type: string }
+        liveExecutionEnabled: { type: boolean }
+        killSwitchEnabled: { type: boolean }
+
+    DataLicenseList:
+      type: object
+      required: [licenses, count]
+      properties:
+        licenses: { type: array, items: { type: object, additionalProperties: true } }
+        count: { type: integer }
+
+    ConnectorHealth:
+      type: object
+      required: [adapters, recent_requests]
+      properties:
+        adapters: { type: array, items: { type: object, additionalProperties: true } }
+        recent_requests: { type: array, items: { type: object, additionalProperties: true } }
+
+    ModelRegistryList:
+      type: object
+      required: [models, count]
+      properties:
+        models: { type: array, items: { type: object, additionalProperties: true } }
+        count: { type: integer }
+
+    FeatureDefinitionList:
+      type: object
+      required: [features, count]
+      properties:
+        features: { type: array, items: { type: object, additionalProperties: true } }
+        count: { type: integer }
+
+    AcceptanceGateList:
+      type: object
+      required: [gates, count]
+      properties:
+        gates: { type: array, items: { type: object, additionalProperties: true } }
+        count: { type: integer }
+
+    ResourceState:
+      type: object
+      required: [current, history]
+      properties:
+        current:
+          nullable: true
+          type: object
+          additionalProperties: true
+        history: { type: array, items: { type: object, additionalProperties: true } }
+
+    JobList:
+      type: object
+      required: [jobs, count]
+      properties:
+        jobs: { type: array, items: { type: object, additionalProperties: true } }
+        count: { type: integer }
 
     ErrorResponse:
       type: object

@@ -281,6 +281,7 @@ export const FORMULA_REGISTRY = [
   {
     id: "RELATIVE_DIFFERENCE_V2", version: "2.0", name: "Relative difference",
     expression: "abs(x1-x2)/max(abs(x1),abs(x2),epsilon)",
+    machineExpression: { op: "divide", left: { op: "abs_diff", args: ["x1", "x2"] }, right: { op: "max", args: [{ op: "abs", arg: "x1" }, { op: "abs", arg: "x2" }, "epsilon"] } },
     variables: ["x1", "x2", "epsilon"], units: "ratio", validRange: "[0,1]",
     missingValueRule: "return null", zeroDivisionRule: "epsilon floor",
     testStatus: "passed", owner: "IEIS Quant", approvalStatus: "approved",
@@ -288,6 +289,7 @@ export const FORMULA_REGISTRY = [
   {
     id: "DATA_CONFIDENCE_V2", version: "2.0", name: "Data confidence",
     expression: "sum(weight[k]*component_score[k])/sum(weight[k])",
+    machineExpression: { op: "weighted_mean", values: "component_score", weights: "weight", missing: "coverage_shrinkage" },
     variables: ["component_score", "weight"], units: "score 0..100", validRange: "[0,100]",
     missingValueRule: "coverage shrinkage toward 50", zeroDivisionRule: "return neutral 50",
     testStatus: "passed", owner: "IEIS Quant", approvalStatus: "approved",
@@ -295,6 +297,7 @@ export const FORMULA_REGISTRY = [
   {
     id: "COVERAGE_SHRINKAGE_V2", version: "2.0", name: "Coverage shrinkage",
     expression: "50 + coverage*(raw-50)",
+    machineExpression: { op: "add", args: [50, { op: "multiply", args: ["coverage", { op: "subtract", args: ["raw", 50] }] }] },
     variables: ["coverage", "raw"], units: "score 0..100", validRange: "[0,100]",
     missingValueRule: "missing components excluded from coverage", zeroDivisionRule: "neutral 50",
     testStatus: "passed", owner: "IEIS Quant", approvalStatus: "approved",
@@ -302,6 +305,7 @@ export const FORMULA_REGISTRY = [
   {
     id: "CANDIDATE_SCORE_V2", version: "2.0", name: "Candidate score",
     expression: "clip(min(50+(raw-50)*(DC/100), HardGateCap),0,100)",
+    machineExpression: { op: "clip", min: 0, max: 100, value: { op: "min", args: [{ op: "add", args: [50, { op: "multiply", args: [{ op: "subtract", args: ["raw", 50] }, { op: "divide", left: "DC", right: 100 }] }] }, "HardGateCap"] } },
     variables: ["raw", "DC", "HardGateCap"], units: "score 0..100", validRange: "[0,100]",
     missingValueRule: "neutral component with reduced coverage", zeroDivisionRule: "DC denominator bounded",
     testStatus: "passed", owner: "IEIS Quant", approvalStatus: "approved",
@@ -309,6 +313,7 @@ export const FORMULA_REGISTRY = [
   {
     id: "CFO_CONVERSION_V2", version: "2.0", name: "CFO conversion",
     expression: "CFO/max(abs(NormalizedPAT),PATDenominatorFloor)",
+    machineExpression: { op: "divide", left: "CFO", right: { op: "max", args: [{ op: "abs", arg: "NormalizedPAT" }, "PATDenominatorFloor"] } },
     variables: ["CFO", "NormalizedPAT", "PATDenominatorFloor"], units: "ratio", validRange: "finite",
     missingValueRule: "return null", zeroDivisionRule: "PAT floor",
     testStatus: "passed", owner: "IEIS Fundamental", approvalStatus: "approved",
@@ -316,6 +321,7 @@ export const FORMULA_REGISTRY = [
   {
     id: "FCF_CONVERSION_V2", version: "2.0", name: "FCF conversion",
     expression: "(CFO-MaintenanceCapex)/max(abs(NormalizedPAT),PATDenominatorFloor)",
+    machineExpression: { op: "divide", left: { op: "subtract", args: ["CFO", "MaintenanceCapex"] }, right: { op: "max", args: [{ op: "abs", arg: "NormalizedPAT" }, "PATDenominatorFloor"] } },
     variables: ["CFO", "MaintenanceCapex", "NormalizedPAT", "PATDenominatorFloor"], units: "ratio", validRange: "finite",
     missingValueRule: "return null", zeroDivisionRule: "PAT floor",
     testStatus: "passed", owner: "IEIS Fundamental", approvalStatus: "approved",
@@ -323,6 +329,7 @@ export const FORMULA_REGISTRY = [
   {
     id: "VALUE_QUALITY_ADJUSTMENT_V2", version: "2.0", name: "Value quality adjustment",
     expression: "ValueScore*(0.50+0.50*(QualityScore/100))",
+    machineExpression: { op: "multiply", args: ["ValueScore", { op: "add", args: [0.5, { op: "multiply", args: [0.5, { op: "divide", left: "QualityScore", right: 100 }] }] }] },
     variables: ["ValueScore", "QualityScore"], units: "score 0..100", validRange: "[0,100]",
     missingValueRule: "neutral score", zeroDivisionRule: "fixed 100 scale",
     testStatus: "passed", owner: "IEIS Quant", approvalStatus: "approved",
@@ -330,6 +337,7 @@ export const FORMULA_REGISTRY = [
   {
     id: "COMPOSITE_RANK_V2", version: "2.0", name: "Composite rank",
     expression: "0.50*Overall+0.25*Sector+0.15*Size+0.10*Persistence",
+    machineExpression: { op: "sum", terms: [{ weight: 0.5, value: "Overall" }, { weight: 0.25, value: "Sector" }, { weight: 0.15, value: "Size" }, { weight: 0.1, value: "Persistence" }] },
     variables: ["Overall", "Sector", "Size", "Persistence"], units: "score 0..100", validRange: "[0,100]",
     missingValueRule: "component omitted and coverage reduced", zeroDivisionRule: "weights renormalized",
     testStatus: "passed", owner: "IEIS Quant", approvalStatus: "approved",
@@ -337,6 +345,7 @@ export const FORMULA_REGISTRY = [
   {
     id: "PROMOTION_SCORE_V2", version: "2.0", name: "Promotion score",
     expression: "0.45*Candidate+0.15*Sector+0.10*DC+0.10*Persistence+0.10*Liquidity+0.05*Event+0.05*Portfolio",
+    machineExpression: { op: "sum", terms: [{ weight: 0.45, value: "Candidate" }, { weight: 0.15, value: "Sector" }, { weight: 0.1, value: "DC" }, { weight: 0.1, value: "Persistence" }, { weight: 0.1, value: "Liquidity" }, { weight: 0.05, value: "Event" }, { weight: 0.05, value: "Portfolio" }] },
     variables: ["Candidate", "Sector", "DC", "Persistence", "Liquidity", "Event", "Portfolio"], units: "score 0..100", validRange: "[0,100]",
     missingValueRule: "missing dimensions reduce coverage", zeroDivisionRule: "weights renormalized",
     testStatus: "passed", owner: "IEIS Quant", approvalStatus: "approved",
@@ -344,6 +353,7 @@ export const FORMULA_REGISTRY = [
   {
     id: "RESEARCH_SCORE_V2", version: "2.0", name: "Research score",
     expression: "50+(raw-50)*(ResearchConfidence/100)",
+    machineExpression: { op: "add", args: [50, { op: "multiply", args: [{ op: "subtract", args: ["raw", 50] }, { op: "divide", left: "ResearchConfidence", right: 100 }] }] },
     variables: ["raw", "ResearchConfidence"], units: "score 0..100", validRange: "[0,100]",
     missingValueRule: "neutral raw score", zeroDivisionRule: "fixed 100 scale",
     testStatus: "passed", owner: "IEIS Research", approvalStatus: "approved",
@@ -351,6 +361,7 @@ export const FORMULA_REGISTRY = [
   {
     id: "HORIZON_SCORE_V2", version: "2.0", name: "Horizon score",
     expression: "sum(weight[k]*component[k])/sum(weight[k])",
+    machineExpression: { op: "weighted_mean", values: "component", weights: "weight", missing: "coverage_shrinkage" },
     variables: ["component", "weight"], units: "score 0..100", validRange: "[0,100]",
     missingValueRule: "coverage shrinkage", zeroDivisionRule: "neutral 50",
     testStatus: "passed", owner: "IEIS Signals", approvalStatus: "approved",
@@ -358,6 +369,7 @@ export const FORMULA_REGISTRY = [
   {
     id: "SIGNAL_CONFIDENCE_V2", version: "2.0", name: "Signal confidence",
     expression: "100*product(component[j]/100)^(1/n)",
+    machineExpression: { op: "geometric_mean", values: "component", scale: 100 },
     variables: ["component"], units: "score 0..100", validRange: "[0,100]",
     missingValueRule: "missing components excluded", zeroDivisionRule: "zero component yields zero confidence",
     testStatus: "passed", owner: "IEIS Signals", approvalStatus: "approved",
@@ -365,6 +377,7 @@ export const FORMULA_REGISTRY = [
   {
     id: "FINAL_HSS_V2", version: "2.0", name: "Final horizon signal score",
     expression: "clip(min(50+(raw-50)*(confidence/100)-penalties,HardGateCap),0,100)",
+    machineExpression: { op: "clip", min: 0, max: 100, value: { op: "min", args: [{ op: "subtract", args: [{ op: "add", args: [50, { op: "multiply", args: [{ op: "subtract", args: ["raw", 50] }, { op: "divide", left: "confidence", right: 100 }] }] }, "penalties"] }, "HardGateCap"] } },
     variables: ["raw", "confidence", "penalties", "HardGateCap"], units: "score 0..100", validRange: "[0,100]",
     missingValueRule: "insufficient data state", zeroDivisionRule: "confidence denominator bounded",
     testStatus: "passed", owner: "IEIS Signals", approvalStatus: "approved",
@@ -372,6 +385,7 @@ export const FORMULA_REGISTRY = [
   {
     id: "WEIGHTED_FAIR_VALUE_V2", version: "2.0", name: "Weighted fair value",
     expression: "sum(probability[s]*fair_value[s])",
+    machineExpression: { op: "weighted_sum", values: "fair_value", weights: "probability", requireWeightTotal: 1 },
     variables: ["probability", "fair_value"], units: "INR/share", validRange: "finite positive",
     missingValueRule: "invalid scenarios excluded", zeroDivisionRule: "return null when probability sum is zero",
     testStatus: "passed", owner: "IEIS Research", approvalStatus: "approved",
@@ -379,8 +393,41 @@ export const FORMULA_REGISTRY = [
   {
     id: "EXPECTED_ANNUAL_RETURN_V2", version: "2.0", name: "Expected annualized return",
     expression: "((WeightedFairValue+Dividends)/CurrentPrice)^(1/HorizonYears)-1",
+    machineExpression: { op: "subtract", args: [{ op: "power", base: { op: "divide", left: { op: "add", args: ["WeightedFairValue", "Dividends"] }, right: "CurrentPrice" }, exponent: { op: "divide", left: 1, right: "HorizonYears" } }, 1] },
     variables: ["WeightedFairValue", "Dividends", "CurrentPrice", "HorizonYears"], units: "decimal return",
     validRange: "finite", missingValueRule: "return null", zeroDivisionRule: "positive price and horizon required",
     testStatus: "passed", owner: "IEIS Research", approvalStatus: "approved",
+  },
+  {
+    id: "ACCRUAL_RATIO_V2", version: "2.0", name: "Accrual ratio",
+    expression: "(NormalizedPAT-CFO)/max(abs(AverageOperatingAssets),AssetFloor)",
+    machineExpression: { op: "divide", left: { op: "subtract", args: ["NormalizedPAT", "CFO"] }, right: { op: "max", args: [{ op: "abs", arg: "AverageOperatingAssets" }, "AssetFloor"] } },
+    variables: ["NormalizedPAT", "CFO", "AverageOperatingAssets", "AssetFloor"], units: "ratio", validRange: "finite",
+    missingValueRule: "return null", zeroDivisionRule: "asset floor",
+    testStatus: "passed", owner: "IEIS Fundamental", approvalStatus: "approved",
+  },
+  {
+    id: "PER_SHARE_CAGR_V2", version: "2.0", name: "Per-share CAGR",
+    expression: "((EndingMetric/EndingDilutedShares)/(BeginningMetric/BeginningDilutedShares))^(1/Years)-1",
+    machineExpression: { op: "subtract", args: [{ op: "power", base: { op: "divide", left: { op: "divide", left: "EndingMetric", right: "EndingDilutedShares" }, right: { op: "divide", left: "BeginningMetric", right: "BeginningDilutedShares" } }, exponent: { op: "divide", left: 1, right: "Years" } }, 1] },
+    variables: ["BeginningMetric", "EndingMetric", "BeginningDilutedShares", "EndingDilutedShares", "Years"], units: "decimal return", validRange: "finite",
+    missingValueRule: "invalid or non-positive bases return null", zeroDivisionRule: "positive share counts and years required",
+    testStatus: "passed", owner: "IEIS Fundamental", approvalStatus: "approved",
+  },
+  {
+    id: "ROIIC_V2", version: "2.0", name: "Return on incremental invested capital",
+    expression: "ChangeInNOPAT/max(abs(ChangeInInvestedCapital),CapitalChangeFloor)",
+    machineExpression: { op: "divide", left: "ChangeInNOPAT", right: { op: "max", args: [{ op: "abs", arg: "ChangeInInvestedCapital" }, "CapitalChangeFloor"] } },
+    variables: ["ChangeInNOPAT", "ChangeInInvestedCapital", "CapitalChangeFloor"], units: "ratio", validRange: "finite",
+    missingValueRule: "multi-year smoothing required", zeroDivisionRule: "capital change floor",
+    testStatus: "passed", owner: "IEIS Fundamental", approvalStatus: "approved",
+  },
+  {
+    id: "POSITION_SUITABILITY_V2", version: "2.0", name: "Position suitability",
+    expression: "clip(100*ReturnScore*ConfidenceFactor*LiquidityFactor/(DownsidePenalty*VolatilityPenalty*CorrelationPenalty*EventPenalty),0,100)",
+    machineExpression: { op: "clip", min: 0, max: 100, value: { op: "divide", left: { op: "multiply", args: [100, "ReturnScore", "ConfidenceFactor", "LiquidityFactor"] }, right: { op: "multiply", args: ["DownsidePenalty", "VolatilityPenalty", "CorrelationPenalty", "EventPenalty"] } } },
+    variables: ["ReturnScore", "ConfidenceFactor", "LiquidityFactor", "DownsidePenalty", "VolatilityPenalty", "CorrelationPenalty", "EventPenalty"], units: "score 0..100", validRange: "[0,100]",
+    missingValueRule: "hard gates override; missing inputs produce pending review", zeroDivisionRule: "positive penalty references required",
+    testStatus: "passed", owner: "IEIS Portfolio", approvalStatus: "draft",
   },
 ] as const;

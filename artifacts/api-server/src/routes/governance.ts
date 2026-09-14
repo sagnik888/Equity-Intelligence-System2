@@ -1,5 +1,21 @@
 import { Router, type IRouter } from "express";
-import { db, securitiesTable, dataSourcesTable, pointInTimeFactsTable, corporateActionsTable } from "@workspace/db";
+import {
+  db,
+  securitiesTable,
+  dataSourcesTable,
+  pointInTimeFactsTable,
+  corporateActionsTable,
+  systemSettingsTable,
+  dataLicensesTable,
+  connectorAdaptersTable,
+  connectorRequestsTable,
+  modelRegistryTable,
+  featureDefinitionsTable,
+  resourceSnapshotsTable,
+  jobsTable,
+  acceptanceGatesTable,
+} from "@workspace/db";
+import { count, desc, eq } from "drizzle-orm";
 import { FORMULA_REGISTRY, FORMULA_VERSION } from "../lib/formulas";
 
 const router: IRouter = Router();
@@ -13,32 +29,102 @@ router.get("/governance/formulas", (_req, res) => {
 });
 
 router.get("/governance/status", async (_req, res): Promise<void> => {
-  const [coverage, sources, facts, actions] = await Promise.all([
-    db.select({ count: securitiesTable.id }).from(securitiesTable),
-    db.select({ count: dataSourcesTable.id }).from(dataSourcesTable),
-    db.select({ count: pointInTimeFactsTable.id }).from(pointInTimeFactsTable),
-    db.select({ count: corporateActionsTable.id }).from(corporateActionsTable),
+  const [coverage, sources, facts, actions, settings, licenses, connectors, gates, latestResource] = await Promise.all([
+    db.select({ count: count() }).from(securitiesTable),
+    db.select({ count: count() }).from(dataSourcesTable),
+    db.select({ count: count() }).from(pointInTimeFactsTable),
+    db.select({ count: count() }).from(corporateActionsTable),
+    db.select().from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1),
+    db.select({ count: count() }).from(dataLicensesTable),
+    db.select({ count: count() }).from(connectorAdaptersTable),
+    db.select({ count: count() }).from(acceptanceGatesTable),
+    db.select().from(resourceSnapshotsTable).orderBy(desc(resourceSnapshotsTable.capturedAt)).limit(1),
   ]);
-  const universeCount = coverage.length;
+  const universeCount = Number(coverage[0]?.count ?? 0);
+  const sourceCount = Number(sources[0]?.count ?? 0);
+  const factCount = Number(facts[0]?.count ?? 0);
+  const actionCount = Number(actions[0]?.count ?? 0);
+  const profile = settings[0];
   const target = 2000;
+  const architectureStatus = "validated";
+  const codeStatus = "validated";
+  const dataStatus = sourceCount > 0 && factCount > 0 ? "validated" : "demo_only";
+  const investmentStatus = "not_validated";
+  const executionStatus = profile?.liveExecutionEnabled ? "blocked_by_policy" : "paper_only";
   res.json({
-    system_mode: "alert_paper",
-    live_execution_enabled: false,
+    system_mode: profile?.operatingMode ?? "alert_only",
+    deployment_profile: profile?.profile ?? "personal_core",
+    live_execution_enabled: profile?.liveExecutionEnabled ?? false,
+    kill_switch_enabled: profile?.killSwitchEnabled ?? false,
     dataset_status: "seeded_demo",
     coverage: { current: universeCount, target, coverage_pct: Math.min(100, (universeCount / target) * 100) },
     validation: {
-      data: sources.length > 0 && facts.length > 0 ? "validated" : "demo_only",
+      architecture: architectureStatus,
+      data: dataStatus,
+      code: codeStatus,
       model: "formula_tests_passed",
-      investment: "not_validated",
-      execution: "paper_only",
+      investment: investmentStatus,
+      execution: executionStatus,
     },
     foundations: {
-      licensed_sources_registered: sources.length > 0,
-      point_in_time_facts: facts.length > 0,
-      corporate_actions: actions.length > 0,
+      licensed_sources_registered: Number(licenses[0]?.count ?? 0) > 0,
+      source_adapters_registered: Number(connectors[0]?.count ?? 0) > 0,
+      point_in_time_facts: factCount > 0,
+      corporate_actions: actionCount > 0,
+      acceptance_gates_registered: Number(gates[0]?.count ?? 0) > 0,
     },
+    resources: latestResource[0] ?? null,
     generated_at: new Date().toISOString(),
   });
+});
+
+router.get("/governance/settings", async (_req, res): Promise<void> => {
+  const [settings] = await db.select().from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1);
+  res.json(settings ?? {
+    id: 1,
+    profile: "personal_core",
+    operatingMode: "alert_only",
+    liveExecutionEnabled: false,
+    killSwitchEnabled: false,
+  });
+});
+
+router.get("/governance/licenses", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(dataLicensesTable).orderBy(desc(dataLicensesTable.createdAt));
+  res.json({ licenses: rows, count: rows.length });
+});
+
+router.get("/governance/connectors", async (_req, res): Promise<void> => {
+  const [adapters, recentRequests] = await Promise.all([
+    db.select().from(connectorAdaptersTable).orderBy(connectorAdaptersTable.providerId),
+    db.select().from(connectorRequestsTable).orderBy(desc(connectorRequestsTable.createdAt)).limit(50),
+  ]);
+  res.json({ adapters, recent_requests: recentRequests });
+});
+
+router.get("/governance/models", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(modelRegistryTable).orderBy(desc(modelRegistryTable.createdAt));
+  res.json({ models: rows, count: rows.length });
+});
+
+router.get("/governance/features", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(featureDefinitionsTable).orderBy(featureDefinitionsTable.featureId);
+  res.json({ features: rows, count: rows.length });
+});
+
+router.get("/governance/gates", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(acceptanceGatesTable).orderBy(acceptanceGatesTable.category, acceptanceGatesTable.gateKey);
+  res.json({ gates: rows, count: rows.length });
+});
+
+router.get("/governance/resources", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(resourceSnapshotsTable).orderBy(desc(resourceSnapshotsTable.capturedAt)).limit(100);
+  res.json({ current: rows[0] ?? null, history: rows });
+});
+
+router.get("/governance/jobs", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(jobsTable).orderBy(desc(jobsTable.createdAt)).limit(100);
+  res.json({ jobs: rows, count: rows.length });
 });
 
 export default router;

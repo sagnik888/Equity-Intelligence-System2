@@ -7,15 +7,18 @@
  */
 import type { GovernanceStatusCoverage } from './governanceStatusCoverage';
 import type { GovernanceStatusFoundations } from './governanceStatusFoundations';
-import type { GovernanceStatusSystemMode } from './governanceStatusSystemMode';
+import type { GovernanceStatusResources } from './governanceStatusResources';
 import type { GovernanceStatusValidation } from './governanceStatusValidation';
 
 export interface GovernanceStatus {
-  system_mode: GovernanceStatusSystemMode;
+  system_mode: string;
+  deployment_profile: string;
   live_execution_enabled: boolean;
+  kill_switch_enabled: boolean;
   dataset_status: string;
   coverage: GovernanceStatusCoverage;
   validation: GovernanceStatusValidation;
   foundations: GovernanceStatusFoundations;
+  resources?: GovernanceStatusResources;
   generated_at: Date;
 }

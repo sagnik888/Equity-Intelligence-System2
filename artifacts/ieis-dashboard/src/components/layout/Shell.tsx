@@ -2,7 +2,7 @@ import { Link, useRoute, useLocation } from "wouter";
 import {
   LayoutDashboard, Globe2, Zap, BarChart3, ShieldAlert,
   Briefcase, Microscope, BookMarked, FlaskConical, ScrollText,
-  ChevronRight, Activity, Bell
+  ChevronRight, Activity, Bell, Settings2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { path: "/watchlists", label: "Watchlists",   icon: BookMarked,      hint: "Smart lists" },
   { path: "/backtest",   label: "Backtest",     icon: FlaskConical,    hint: "Walk-forward" },
   { path: "/audit",      label: "Audit",        icon: ScrollText,      hint: "Time-machine" },
+  { path: "/governance", label: "Governance",   icon: Settings2,       hint: "Controls" },
 ];
 
 function NavItem({ path, label, icon: Icon, hint }: typeof NAV_ITEMS[number]) {
