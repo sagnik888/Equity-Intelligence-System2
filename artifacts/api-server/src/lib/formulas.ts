@@ -6,7 +6,7 @@
  * without a database or a running server.
  */
 
-export const FORMULA_VERSION = "IEIS-7.2-formula-safe";
+export const FORMULA_VERSION = "IEIS-7.1.4-reference-v1";
 export const NEUTRAL_SCORE = 50;
 export const DEFAULT_EPSILON = 1e-9;
 
@@ -277,7 +277,7 @@ export function expectedAnnualizedReturn(
   );
 }
 
-export const FORMULA_REGISTRY = [
+const FORMULA_DEFINITIONS = [
   {
     id: "RELATIVE_DIFFERENCE_V2", version: "2.0", name: "Relative difference",
     expression: "abs(x1-x2)/max(abs(x1),abs(x2),epsilon)",
@@ -303,11 +303,11 @@ export const FORMULA_REGISTRY = [
     testStatus: "passed", owner: "IEIS Quant", approvalStatus: "approved",
   },
   {
-    id: "CANDIDATE_SCORE_V2", version: "2.0", name: "Candidate score",
-    expression: "clip(min(50+(raw-50)*(DC/100), HardGateCap),0,100)",
-    machineExpression: { op: "clip", min: 0, max: 100, value: { op: "min", args: [{ op: "add", args: [50, { op: "multiply", args: [{ op: "subtract", args: ["raw", 50] }, { op: "divide", left: "DC", right: 100 }] }] }, "HardGateCap"] } },
-    variables: ["raw", "DC", "HardGateCap"], units: "score 0..100", validRange: "[0,100]",
-    missingValueRule: "neutral component with reduced coverage", zeroDivisionRule: "DC denominator bounded",
+    id: "CANDIDATE_SCORE_V3", version: "3.0", name: "Candidate actionable score",
+    expression: "eligible ? clip(min(RawScore,50+(RawScore-50)*(Confidence/100),HardGateCap),0,100) : null",
+    machineExpression: { op: "if", condition: "eligible", then: { op: "clip", min: 0, max: 100, value: { op: "min", args: ["RawScore", { op: "add", args: [50, { op: "multiply", args: [{ op: "subtract", args: ["RawScore", 50] }, { op: "divide", left: "Confidence", right: 100 }] }] }, "HardGateCap"] } }, otherwise: null },
+    variables: ["eligible", "RawScore", "Confidence", "HardGateCap"], units: "score 0..100 or null", validRange: "[0,100]",
+    missingValueRule: "missing required input is unavailable; ineligible returns null", zeroDivisionRule: "fixed 100 confidence scale",
     testStatus: "passed", owner: "IEIS Quant", approvalStatus: "approved",
   },
   {
@@ -351,11 +351,11 @@ export const FORMULA_REGISTRY = [
     testStatus: "passed", owner: "IEIS Quant", approvalStatus: "approved",
   },
   {
-    id: "RESEARCH_SCORE_V2", version: "2.0", name: "Research score",
-    expression: "50+(raw-50)*(ResearchConfidence/100)",
-    machineExpression: { op: "add", args: [50, { op: "multiply", args: [{ op: "subtract", args: ["raw", 50] }, { op: "divide", left: "ResearchConfidence", right: 100 }] }] },
-    variables: ["raw", "ResearchConfidence"], units: "score 0..100", validRange: "[0,100]",
-    missingValueRule: "neutral raw score", zeroDivisionRule: "fixed 100 scale",
+    id: "RESEARCH_SCORE_V3", version: "3.0", name: "Research actionable score",
+    expression: "research_eligible ? clip(min(RawResearchScore,50+(RawResearchScore-50)*(ResearchConfidence/100),ResearchHardCap),0,100) : null",
+    machineExpression: { op: "if", condition: "research_eligible", then: { op: "clip", min: 0, max: 100, value: { op: "min", args: ["RawResearchScore", { op: "add", args: [50, { op: "multiply", args: [{ op: "subtract", args: ["RawResearchScore", 50] }, { op: "divide", left: "ResearchConfidence", right: 100 }] }] }, "ResearchHardCap"] } }, otherwise: null },
+    variables: ["research_eligible", "RawResearchScore", "ResearchConfidence", "ResearchHardCap"], units: "score 0..100 or null", validRange: "[0,100]",
+    missingValueRule: "missing required input is unavailable; ineligible returns null", zeroDivisionRule: "fixed 100 confidence scale",
     testStatus: "passed", owner: "IEIS Research", approvalStatus: "approved",
   },
   {
@@ -367,19 +367,19 @@ export const FORMULA_REGISTRY = [
     testStatus: "passed", owner: "IEIS Signals", approvalStatus: "approved",
   },
   {
-    id: "SIGNAL_CONFIDENCE_V2", version: "2.0", name: "Signal confidence",
-    expression: "100*product(component[j]/100)^(1/n)",
-    machineExpression: { op: "geometric_mean", values: "component", scale: 100 },
-    variables: ["component"], units: "score 0..100", validRange: "[0,100]",
-    missingValueRule: "missing components excluded", zeroDivisionRule: "zero component yields zero confidence",
+    id: "SIGNAL_CONFIDENCE_V3", version: "3.0", name: "Signal confidence",
+    expression: "100*product(required_component[j]/100)^(1/N_required)",
+    machineExpression: { op: "geometric_mean", values: "required_components", scale: 100, missing: "unavailable" },
+    variables: ["horizon", "required_components"], units: "score 0..100", validRange: "[0,100]",
+    missingValueRule: "a missing horizon-required component is unavailable; never change N silently", zeroDivisionRule: "zero required component yields zero confidence",
     testStatus: "passed", owner: "IEIS Signals", approvalStatus: "approved",
   },
   {
-    id: "FINAL_HSS_V2", version: "2.0", name: "Final horizon signal score",
-    expression: "clip(min(50+(raw-50)*(confidence/100)-penalties,HardGateCap),0,100)",
-    machineExpression: { op: "clip", min: 0, max: 100, value: { op: "min", args: [{ op: "subtract", args: [{ op: "add", args: [50, { op: "multiply", args: [{ op: "subtract", args: ["raw", 50] }, { op: "divide", left: "confidence", right: 100 }] }] }, "penalties"] }, "HardGateCap"] } },
-    variables: ["raw", "confidence", "penalties", "HardGateCap"], units: "score 0..100", validRange: "[0,100]",
-    missingValueRule: "insufficient data state", zeroDivisionRule: "confidence denominator bounded",
+    id: "FINAL_HSS_V3", version: "3.0", name: "Final horizon signal score",
+    expression: "horizon_eligible ? clip(min(RawHSS,50+(RawHSS-50)*(SignalConfidence/100),HardGateCap)-StalePenalty-EventPenalty-RiskPenalty,0,100) : null",
+    machineExpression: { op: "if", condition: "horizon_eligible", then: { op: "clip", min: 0, max: 100, value: { op: "subtract", args: [{ op: "min", args: ["RawHSS", { op: "add", args: [50, { op: "multiply", args: [{ op: "subtract", args: ["RawHSS", 50] }, { op: "divide", left: "SignalConfidence", right: 100 }] }] }, "HardGateCap"] }, { op: "sum", args: ["StalePenalty", "EventPenalty", "RiskPenalty"] }] } }, otherwise: null },
+    variables: ["horizon_eligible", "RawHSS", "SignalConfidence", "HardGateCap", "StalePenalty", "EventPenalty", "RiskPenalty"], units: "score 0..100 or null", validRange: "[0,100]",
+    missingValueRule: "missing required input is unavailable; ineligible returns null", zeroDivisionRule: "fixed 100 confidence scale",
     testStatus: "passed", owner: "IEIS Signals", approvalStatus: "approved",
   },
   {
@@ -430,4 +430,66 @@ export const FORMULA_REGISTRY = [
     missingValueRule: "hard gates override; missing inputs produce pending review", zeroDivisionRule: "positive penalty references required",
     testStatus: "passed", owner: "IEIS Portfolio", approvalStatus: "draft",
   },
+  {
+    id: "REQUIRED_MEDIAN_ADV_V2", version: "2.0", name: "Required median traded value",
+    expression: "PlannedPositionValue / MaximumParticipationRate",
+    machineExpression: { op: "divide", left: "PlannedPositionValue", right: "MaximumParticipationRate" },
+    variables: ["PlannedPositionValue", "MaximumParticipationRate"], units: "currency", validRange: "non-negative finite",
+    missingValueRule: "return null when unavailable", zeroDivisionRule: "participation rate must be greater than zero and at most one",
+    testStatus: "passed", owner: "IEIS Portfolio", approvalStatus: "draft",
+  },
+  {
+    id: "EXIT_DAYS_V2", version: "2.0", name: "Estimated exit days",
+    expression: "PositionValue / max(MedianDailyTradedValue*AllowedParticipationRate,MinimumLiquidityDenominator)",
+    machineExpression: { op: "divide", left: "PositionValue", right: { op: "max", args: [{ op: "multiply", args: ["MedianDailyTradedValue", "AllowedParticipationRate"] }, "MinimumLiquidityDenominator"] } },
+    variables: ["PositionValue", "MedianDailyTradedValue", "AllowedParticipationRate", "MinimumLiquidityDenominator"], units: "trading days", validRange: "non-negative finite",
+    missingValueRule: "return null when unavailable", zeroDivisionRule: "minimum liquidity denominator must be positive",
+    testStatus: "passed", owner: "IEIS Portfolio", approvalStatus: "draft",
+  },
+  {
+    id: "TRADING_CONTINUITY_V2", version: "2.0", name: "Trading continuity",
+    expression: "clip(DaysWithValidTrades/ExpectedTradingDays,0,1)",
+    machineExpression: { op: "clip", min: 0, max: 1, value: { op: "divide", left: "DaysWithValidTrades", right: "ExpectedTradingDays" } },
+    variables: ["DaysWithValidTrades", "ExpectedTradingDays"], units: "ratio", validRange: "[0,1]",
+    missingValueRule: "return null when unavailable", zeroDivisionRule: "expected trading days must be positive",
+    testStatus: "passed", owner: "IEIS Data", approvalStatus: "draft",
+  },
+  {
+    id: "FRESHNESS_FACTOR_V2", version: "2.0", name: "Staleness decay",
+    expression: "exp(-DecayRate*max(0,ActualAge-AllowedAge))",
+    machineExpression: { op: "exp", arg: { op: "negate", arg: { op: "multiply", args: ["DecayRate", { op: "max", args: [0, { op: "subtract", args: ["ActualAge", "AllowedAge"] }] }] } } },
+    variables: ["ActualAge", "AllowedAge", "DecayRate"], units: "ratio", validRange: "[0,1]",
+    missingValueRule: "return null when unavailable", zeroDivisionRule: "decay rate uses reciprocal age units",
+    testStatus: "passed", owner: "IEIS Data", approvalStatus: "draft",
+  },
+  {
+    id: "ALIGNMENT_SCORE_V2", version: "2.0", name: "Cross-horizon alignment",
+    expression: "sum(HorizonImportance[h]*DirectionValue[h])/sum(HorizonImportance[h])",
+    machineExpression: { op: "weighted_mean", values: "DirectionValue", weights: "HorizonImportance", validRange: [-1, 1] },
+    variables: ["HorizonImportance", "DirectionValue"], units: "direction score", validRange: "[-1,1]",
+    missingValueRule: "missing horizon state is unavailable", zeroDivisionRule: "total horizon importance must be positive",
+    testStatus: "passed", owner: "IEIS Signals", approvalStatus: "draft",
+  },
+  {
+    id: "POSITION_SIZING_V4", version: "4.0", name: "Final risk-capped quantity",
+    expression: "floor_to_lot(min(Risk,Liquidity,CompanyResidual,SectorResidual,GroupResidual,HorizonResidual,EventResidual,CorrelationResidual,CashOrMargin,Gross,Net,FnoAllocation,DrawdownResidual,AccountRisk),LotSize)",
+    machineExpression: { op: "floor_to_lot", value: { op: "min", args: ["risk", "liquidity", "companyResidual", "sectorResidual", "groupResidual", "horizonResidual", "eventResidual", "correlationResidual", "cashOrMargin", "gross", "net", "fnoAllocation", "drawdownResidual", "accountRisk"] }, lotSize: "lotSize" },
+    variables: ["caps", "lotSize"], units: "whole lots", validRange: "non-negative integer",
+    missingValueRule: "any missing cap blocks the result", zeroDivisionRule: "lot size must be a positive integer",
+    testStatus: "passed", owner: "IEIS Portfolio", approvalStatus: "draft",
+  },
+  {
+    id: "ORDER_INTENT_IDEMPOTENCY_V4", version: "4.0", name: "Canonical business-action identity",
+    expression: "SHA256(canonical_json(accountId,strategyId,securityOrContractId,horizon,signalId,action,decisionVersion))",
+    machineExpression: { op: "canonical_sha256", fields: ["accountId", "strategyId", "securityOrContractId", "horizon", "signalId", "action", "decisionVersion"] },
+    variables: ["accountId", "strategyId", "securityOrContractId", "horizon", "signalId", "action", "decisionVersion"], units: "hexadecimal SHA-256", validRange: "64 lowercase hex characters",
+    missingValueRule: "any missing identity field blocks the result", zeroDivisionRule: "not applicable",
+    testStatus: "passed", owner: "IEIS Execution", approvalStatus: "draft",
+  },
 ] as const;
+
+export const FORMULA_REGISTRY = FORMULA_DEFINITIONS.map((formula) => ({
+  ...formula,
+  testStatus: "reference_tested",
+  approvalStatus: "not_approved",
+}));
