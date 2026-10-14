@@ -5,7 +5,10 @@
  * Indian Equity Intelligence System API
  * OpenAPI spec version: 0.1.0
  */
+import type { SignalComponentBreakdown } from './signalComponentBreakdown';
+import type { SignalEligibilityChecks } from './signalEligibilityChecks';
 import type { SignalHorizon } from './signalHorizon';
+import type { SignalLifecycleState } from './signalLifecycleState';
 import type { SignalState } from './signalState';
 
 export interface Signal {
@@ -16,6 +19,35 @@ export interface Signal {
   universe_group?: string;
   horizon: SignalHorizon;
   state: SignalState;
+  lifecycle_state: SignalLifecycleState;
+  /** @nullable */
+  previous_state?: string | null;
+  completed_bar: boolean;
+  source_sealed: boolean;
+  /** @nullable */
+  confirmed_at?: Date | null;
+  /** @nullable */
+  valid_until?: Date | null;
+  /** @nullable */
+  cooldown_until?: Date | null;
+  /** @nullable */
+  next_session_eligible_at?: Date | null;
+  /** @nullable */
+  regime?: string | null;
+  /** @nullable */
+  model_version?: string | null;
+  /** @nullable */
+  decision_version?: string | null;
+  /** @nullable */
+  source_snapshot_id?: string | null;
+  /** @nullable */
+  component_breakdown?: SignalComponentBreakdown;
+  /** @nullable */
+  eligibility_reason?: string | null;
+  actionable: boolean;
+  /** @nullable */
+  actionable_score?: number | null;
+  eligibility_checks?: SignalEligibilityChecks;
   hss: number;
   confidence: number;
   stale_penalty?: number;

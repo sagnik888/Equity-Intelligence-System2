@@ -8,6 +8,7 @@ import {
   integer,
   pgEnum,
   boolean,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -66,7 +67,7 @@ export const portfolioSettingsTable = pgTable("portfolio_settings", {
   id: integer("id").primaryKey().default(1),
   capital: numeric("capital", { precision: 20, scale: 2 }).notNull(),
   cashReservePct: numeric("cash_reserve_pct", { precision: 6, scale: 3 }).notNull().default("0"),
-  operatingMode: text("operating_mode").notNull().default("paper"),
+  operatingMode: text("operating_mode").notNull().default("alert_only"),
   liveExecutionEnabled: boolean("live_execution_enabled").notNull().default(false),
   killSwitchEnabled: boolean("kill_switch_enabled").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
@@ -75,6 +76,14 @@ export const portfolioSettingsTable = pgTable("portfolio_settings", {
 export const paperOrderIntentsTable = pgTable("paper_order_intents", {
   id: serial("id").primaryKey(),
   idempotencyKey: text("idempotency_key").notNull().unique(),
+  businessActionKey: text("business_action_key"),
+  accountId: text("account_id"),
+  strategyId: text("strategy_id"),
+  securityOrContractId: text("security_or_contract_id"),
+  horizon: text("horizon"),
+  signalId: text("signal_id"),
+  decisionVersion: text("decision_version"),
+  parentIntentId: integer("parent_intent_id"),
   isin: text("isin").notNull(),
   ticker: text("ticker").notNull(),
   side: orderIntentSideEnum("side").notNull(),
@@ -85,9 +94,20 @@ export const paperOrderIntentsTable = pgTable("paper_order_intents", {
   rationale: text("rationale"),
   createdBy: text("created_by").notNull().default("system"),
   approvedBy: text("approved_by"),
+  orderOrigin: text("order_origin").notNull().default("manual"),
+  generationMode: text("generation_mode").notNull().default("human"),
+  humanConfirmation: boolean("human_confirmation").notNull().default(false),
+  algorithmic: boolean("algorithmic").notNull().default(false),
+  strategyRegistration: text("strategy_registration"),
+  exchangeAlgoId: text("exchange_algo_id"),
+  brokerAlgoName: text("broker_algo_name"),
+  staticIpStatus: text("static_ip_status"),
+  brokerConfirmationReference: text("broker_confirmation_reference"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (table) => ({
+  businessActionUnique: uniqueIndex("paper_order_intents_business_action_unique").on(table.businessActionKey),
+}));
 
 export const insertPortfolioPositionSchema = createInsertSchema(portfolioPositionsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertPortfolioPosition = z.infer<typeof insertPortfolioPositionSchema>;

@@ -8,6 +8,7 @@ import {
   integer,
   pgEnum,
   boolean,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -33,6 +34,18 @@ export const signalStateEnum = pgEnum("signal_state", [
   "no_signal",
 ]);
 
+export const signalLifecycleEnum = pgEnum("signal_lifecycle", [
+  "not_eligible",
+  "insufficient_data",
+  "preview_only",
+  "ready",
+  "entry_pending",
+  "active",
+  "exit_pending",
+  "closed",
+  "cooldown",
+]);
+
 export const signalsTable = pgTable("signals", {
   id: serial("id").primaryKey(),
   isin: text("isin").notNull(),
@@ -42,6 +55,20 @@ export const signalsTable = pgTable("signals", {
   universeGroup: text("universe_group").notNull(),
   horizon: signalHorizonEnum("horizon").notNull(),
   state: signalStateEnum("state").notNull(),
+  lifecycleState: signalLifecycleEnum("lifecycle_state").notNull().default("insufficient_data"),
+  previousState: signalStateEnum("previous_state"),
+  completedBar: boolean("completed_bar").notNull().default(false),
+  sourceSealed: boolean("source_sealed").notNull().default(false),
+  confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+  validUntil: timestamp("valid_until", { withTimezone: true }),
+  cooldownUntil: timestamp("cooldown_until", { withTimezone: true }),
+  nextSessionEligibleAt: timestamp("next_session_eligible_at", { withTimezone: true }),
+  regime: text("regime"),
+  modelVersion: text("model_version"),
+  decisionVersion: text("decision_version"),
+  sourceSnapshotId: text("source_snapshot_id"),
+  componentBreakdown: jsonb("component_breakdown"),
+  eligibilityReason: text("eligibility_reason"),
   hss: numeric("hss", { precision: 6, scale: 2 }).notNull(), // Horizon Signal Score 0-100
   confidence: numeric("confidence", { precision: 6, scale: 2 }).notNull(),
   stalePenalty: numeric("stale_penalty", { precision: 6, scale: 2 }).notNull().default("0"),

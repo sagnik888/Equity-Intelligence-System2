@@ -12,4 +12,5 @@ export interface PaperOrderIntentList {
   items: PaperOrderIntent[];
   total: number;
   execution_mode: PaperOrderIntentListExecutionMode;
+  live_execution_enabled: boolean;
 }

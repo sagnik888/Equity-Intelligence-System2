@@ -17,6 +17,7 @@ import Watchlists from '@/pages/Watchlists';
 import Backtest from '@/pages/Backtest';
 import Audit from '@/pages/Audit';
 import Governance from '@/pages/Governance';
+import Scores from '@/pages/Scores';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +35,7 @@ function Router() {
         <Route path="/" component={Dashboard} />
         <Route path="/universe" component={Universe} />
         <Route path="/universe/:isin" component={StockDetail} />
+        <Route path="/scores" component={Scores} />
         <Route path="/signals" component={Signals} />
         <Route path="/rankings" component={Rankings} />
         <Route path="/hardgates" component={HardGates} />

@@ -28,16 +28,13 @@ router.get("/backtest/results", async (_req, res): Promise<void> => {
 });
 
 router.get("/backtest/factor-analysis", async (_req, res): Promise<void> => {
-  // Factor analysis data
+  // Do not return invented IC/decile statistics. A real factor analysis must be
+  // computed from a PIT walk-forward run and linked to its source snapshot.
   res.json({
-    factors: [
-      { factor_name: "Quality Score", ic_mean: 0.0412, ic_stability: 0.72, ic_ir: 1.84, decile_spread_pct: 8.3, sector_exposure: 0.12, size_exposure: 0.18, correlation_with_others: [{ other_factor: "Capital Allocation", correlation: 0.61 }, { other_factor: "Balance Sheet", correlation: 0.54 }] },
-      { factor_name: "Growth Score", ic_mean: 0.0318, ic_stability: 0.58, ic_ir: 1.42, decile_spread_pct: 6.1, sector_exposure: 0.08, size_exposure: -0.12, correlation_with_others: [{ other_factor: "Momentum", correlation: 0.43 }] },
-      { factor_name: "Value Score", ic_mean: 0.0287, ic_stability: 0.51, ic_ir: 1.21, decile_spread_pct: 5.4, sector_exposure: -0.22, size_exposure: 0.31, correlation_with_others: [{ other_factor: "Balance Sheet", correlation: 0.29 }] },
-      { factor_name: "Integrity Score", ic_mean: 0.0356, ic_stability: 0.81, ic_ir: 2.01, decile_spread_pct: 9.1, sector_exposure: 0.05, size_exposure: 0.22, correlation_with_others: [] },
-      { factor_name: "Momentum (3M)", ic_mean: 0.0221, ic_stability: 0.41, ic_ir: 0.98, decile_spread_pct: 4.2, sector_exposure: 0.15, size_exposure: -0.08, correlation_with_others: [{ other_factor: "Growth Score", correlation: 0.43 }] },
-      { factor_name: "Data Confidence", ic_mean: 0.0189, ic_stability: 0.88, ic_ir: 1.65, decile_spread_pct: 3.8, sector_exposure: 0.03, size_exposure: 0.41, correlation_with_others: [] },
-    ],
+    computed: false,
+    status: "not_computed",
+    reason: "No reproducible point-in-time walk-forward run is available; fabricated factor statistics are intentionally suppressed.",
+    factors: [],
   });
 });
 

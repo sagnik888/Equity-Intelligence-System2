@@ -8,5 +8,8 @@
 import type { FactorAnalysisFactorsItem } from './factorAnalysisFactorsItem';
 
 export interface FactorAnalysis {
+  computed: boolean;
+  status: string;
+  reason: string;
   factors: FactorAnalysisFactorsItem[];
 }

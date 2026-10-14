@@ -84,7 +84,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-xl font-bold">System Dashboard</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            IEIS v7.2 · {s?.score_date ?? "—"} · <span className="text-amber-400 font-medium">{s?.system_mode?.toUpperCase() ?? "ALERT"} MODE</span>
+            IEIS · Spec 7.1.4 · {s?.score_date ?? "—"} · <span className="text-amber-400 font-medium">{s?.system_mode?.toUpperCase() ?? "ALERT"} MODE</span>
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">

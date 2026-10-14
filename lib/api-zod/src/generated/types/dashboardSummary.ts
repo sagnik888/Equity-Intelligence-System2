@@ -19,5 +19,6 @@ export interface DashboardSummary {
   top_candidates: CandidateScore[];
   data_quality: DashboardSummaryDataQuality;
   system_mode?: DashboardSummarySystemMode;
+  configured_system_mode?: string;
   score_date?: Date;
 }

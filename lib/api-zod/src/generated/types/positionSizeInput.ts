@@ -11,6 +11,10 @@ export interface PositionSizeInput {
   entry_price: number;
   stop_price: number;
   portfolio_capital: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
   risk_percent_per_unit?: number;
   allowed_participation_rate?: number;
   max_exit_days?: number;

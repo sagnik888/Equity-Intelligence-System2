@@ -31,6 +31,7 @@ import type {
   DataLicenseList,
   ErrorResponse,
   EvidenceLedger,
+  ExecutionBlockedResponse,
   FactorAnalysis,
   FeatureDefinitionList,
   FormulaRegistry,
@@ -2010,7 +2011,7 @@ export const createPaperOrderIntent = async (paperOrderIntentInput: PaperOrderIn
 
 
 
-export const getCreatePaperOrderIntentMutationOptions = <TError = ErrorType<void>,
+export const getCreatePaperOrderIntentMutationOptions = <TError = ErrorType<void | ExecutionBlockedResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPaperOrderIntent>>, TError,{data: BodyType<PaperOrderIntentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createPaperOrderIntent>>, TError,{data: BodyType<PaperOrderIntentInput>}, TContext> => {
 
@@ -2039,12 +2040,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreatePaperOrderIntentMutationResult = NonNullable<Awaited<ReturnType<typeof createPaperOrderIntent>>>
     export type CreatePaperOrderIntentMutationBody = BodyType<PaperOrderIntentInput>
-    export type CreatePaperOrderIntentMutationError = ErrorType<void>
+    export type CreatePaperOrderIntentMutationError = ErrorType<void | ExecutionBlockedResponse>
 
     /**
  * @summary Create a duplicate-safe paper order intent
  */
-export const useCreatePaperOrderIntent = <TError = ErrorType<void>,
+export const useCreatePaperOrderIntent = <TError = ErrorType<void | ExecutionBlockedResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPaperOrderIntent>>, TError,{data: BodyType<PaperOrderIntentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createPaperOrderIntent>>,

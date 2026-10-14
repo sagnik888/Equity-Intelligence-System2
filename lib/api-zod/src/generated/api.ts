@@ -460,6 +460,23 @@ export const ListSignalsResponse = zod.object({
   "universe_group": zod.string().optional(),
   "horizon": zod.enum(['daily', 'weekly', 'monthly', 'medium', 'long']),
   "state": zod.enum(['strong_buy', 'buy', 'accumulate', 'watch', 'hold', 'reduce', 'sell', 'avoid', 'pending_review', 'no_signal']),
+  "lifecycle_state": zod.enum(['not_eligible', 'insufficient_data', 'preview_only', 'ready', 'entry_pending', 'active', 'exit_pending', 'closed', 'cooldown']),
+  "previous_state": zod.string().nullish(),
+  "completed_bar": zod.boolean(),
+  "source_sealed": zod.boolean(),
+  "confirmed_at": zod.coerce.date().nullish(),
+  "valid_until": zod.coerce.date().nullish(),
+  "cooldown_until": zod.coerce.date().nullish(),
+  "next_session_eligible_at": zod.coerce.date().nullish(),
+  "regime": zod.string().nullish(),
+  "model_version": zod.string().nullish(),
+  "decision_version": zod.string().nullish(),
+  "source_snapshot_id": zod.string().nullish(),
+  "component_breakdown": zod.record(zod.string(), zod.unknown()).nullish(),
+  "eligibility_reason": zod.string().nullish(),
+  "actionable": zod.boolean(),
+  "actionable_score": zod.number().nullish(),
+  "eligibility_checks": zod.record(zod.string(), zod.boolean()).optional(),
   "hss": zod.number(),
   "confidence": zod.number(),
   "stale_penalty": zod.number().optional(),
@@ -497,6 +514,23 @@ export const GetStockSignalsResponse = zod.object({
   "universe_group": zod.string().optional(),
   "horizon": zod.enum(['daily', 'weekly', 'monthly', 'medium', 'long']),
   "state": zod.enum(['strong_buy', 'buy', 'accumulate', 'watch', 'hold', 'reduce', 'sell', 'avoid', 'pending_review', 'no_signal']),
+  "lifecycle_state": zod.enum(['not_eligible', 'insufficient_data', 'preview_only', 'ready', 'entry_pending', 'active', 'exit_pending', 'closed', 'cooldown']),
+  "previous_state": zod.string().nullish(),
+  "completed_bar": zod.boolean(),
+  "source_sealed": zod.boolean(),
+  "confirmed_at": zod.coerce.date().nullish(),
+  "valid_until": zod.coerce.date().nullish(),
+  "cooldown_until": zod.coerce.date().nullish(),
+  "next_session_eligible_at": zod.coerce.date().nullish(),
+  "regime": zod.string().nullish(),
+  "model_version": zod.string().nullish(),
+  "decision_version": zod.string().nullish(),
+  "source_snapshot_id": zod.string().nullish(),
+  "component_breakdown": zod.record(zod.string(), zod.unknown()).nullish(),
+  "eligibility_reason": zod.string().nullish(),
+  "actionable": zod.boolean(),
+  "actionable_score": zod.number().nullish(),
+  "eligibility_checks": zod.record(zod.string(), zod.boolean()).optional(),
   "hss": zod.number(),
   "confidence": zod.number(),
   "stale_penalty": zod.number().optional(),
@@ -560,6 +594,23 @@ export const GetTopBuySignalsResponse = zod.object({
   "universe_group": zod.string().optional(),
   "horizon": zod.enum(['daily', 'weekly', 'monthly', 'medium', 'long']),
   "state": zod.enum(['strong_buy', 'buy', 'accumulate', 'watch', 'hold', 'reduce', 'sell', 'avoid', 'pending_review', 'no_signal']),
+  "lifecycle_state": zod.enum(['not_eligible', 'insufficient_data', 'preview_only', 'ready', 'entry_pending', 'active', 'exit_pending', 'closed', 'cooldown']),
+  "previous_state": zod.string().nullish(),
+  "completed_bar": zod.boolean(),
+  "source_sealed": zod.boolean(),
+  "confirmed_at": zod.coerce.date().nullish(),
+  "valid_until": zod.coerce.date().nullish(),
+  "cooldown_until": zod.coerce.date().nullish(),
+  "next_session_eligible_at": zod.coerce.date().nullish(),
+  "regime": zod.string().nullish(),
+  "model_version": zod.string().nullish(),
+  "decision_version": zod.string().nullish(),
+  "source_snapshot_id": zod.string().nullish(),
+  "component_breakdown": zod.record(zod.string(), zod.unknown()).nullish(),
+  "eligibility_reason": zod.string().nullish(),
+  "actionable": zod.boolean(),
+  "actionable_score": zod.number().nullish(),
+  "eligibility_checks": zod.record(zod.string(), zod.boolean()).optional(),
   "hss": zod.number(),
   "confidence": zod.number(),
   "stale_penalty": zod.number().optional(),
@@ -700,6 +751,11 @@ export const DeletePortfolioPositionResponse = zod.void()
  * @summary Portfolio summary with P&L and risk metrics
  */
 export const GetPortfolioSummaryResponse = zod.object({
+  "operating_mode": zod.string().optional(),
+  "configured_operating_mode": zod.string().optional(),
+  "live_execution_enabled": zod.boolean().optional(),
+  "configured_live_execution_enabled": zod.boolean().optional(),
+  "kill_switch_enabled": zod.boolean().optional(),
   "total_capital": zod.number(),
   "invested_capital": zod.number(),
   "cash": zod.number().optional(),
@@ -811,7 +867,9 @@ export const ListSuitabilityScoresResponse = zod.object({
 /**
  * @summary Calculate risk-constrained position size
  */
-export const calculatePositionSizeBodyRiskPercentPerUnitDefault = 1;
+export const calculatePositionSizeBodyRiskPercentPerUnitMin = 0;
+export const calculatePositionSizeBodyRiskPercentPerUnitMax = 100;
+
 export const calculatePositionSizeBodyAllowedParticipationRateDefault = 0.1;
 export const calculatePositionSizeBodyMaxExitDaysDefault = 10;
 export const calculatePositionSizeBodyMaxCompanyWeightDefault = 0.1;
@@ -823,7 +881,7 @@ export const CalculatePositionSizeBody = zod.object({
   "entry_price": zod.number(),
   "stop_price": zod.number(),
   "portfolio_capital": zod.number(),
-  "risk_percent_per_unit": zod.number().default(calculatePositionSizeBodyRiskPercentPerUnitDefault),
+  "risk_percent_per_unit": zod.number().min(calculatePositionSizeBodyRiskPercentPerUnitMin).max(calculatePositionSizeBodyRiskPercentPerUnitMax).optional(),
   "allowed_participation_rate": zod.number().default(calculatePositionSizeBodyAllowedParticipationRateDefault),
   "max_exit_days": zod.number().default(calculatePositionSizeBodyMaxExitDaysDefault),
   "max_company_weight": zod.number().default(calculatePositionSizeBodyMaxCompanyWeightDefault),
@@ -835,13 +893,19 @@ export const CalculatePositionSizeResponse = zod.object({
   "isin": zod.string(),
   "ticker": zod.string(),
   "name": zod.string(),
+  "executable": zod.boolean(),
+  "status": zod.enum(['preview_only', 'executable']),
+  "blocked_reasons": zod.array(zod.string()),
   "final_quantity": zod.number(),
-  "quantity_by_risk": zod.number().optional(),
-  "quantity_by_liquidity": zod.number().optional(),
-  "quantity_by_company_cap": zod.number().optional(),
-  "quantity_by_sector_cap": zod.number().optional(),
-  "binding_constraint": zod.enum(['risk', 'liquidity', 'company_cap', 'sector_cap', 'horizon_cap', 'event_cap']),
+  "preview_quantity": zod.number().nullable(),
+  "preview_method": zod.string().optional(),
+  "quantity_by_risk": zod.number().nullish(),
+  "quantity_by_liquidity": zod.number().nullish(),
+  "quantity_by_company_cap": zod.number().nullish(),
+  "quantity_by_sector_cap": zod.number().nullish(),
+  "binding_constraint": zod.enum(['risk', 'liquidity', 'company_cap', 'sector_cap', 'horizon_cap', 'event_cap']).nullable(),
   "position_value": zod.number().optional(),
+  "preview_position_value": zod.number().nullish(),
   "portfolio_weight_pct": zod.number().optional(),
   "risk_amount": zod.number().optional(),
   "median_daily_traded_value_cr": zod.number().nullish(),
@@ -870,7 +934,8 @@ export const ListPaperOrderIntentsResponse = zod.object({
   "updated_at": zod.coerce.date()
 })),
   "total": zod.number(),
-  "execution_mode": zod.enum(['paper_only'])
+  "execution_mode": zod.enum(['research_only', 'alert_only', 'paper_trading']),
+  "live_execution_enabled": zod.boolean()
 })
 
 
@@ -1114,10 +1179,13 @@ export const GetBacktestResultResponse = zod.object({
  * @summary Factor IC, decile spreads, and redundancy metrics
  */
 export const GetFactorAnalysisResponse = zod.object({
+  "computed": zod.boolean(),
+  "status": zod.string(),
+  "reason": zod.string(),
   "factors": zod.array(zod.object({
-  "factor_name": zod.string(),
-  "ic_mean": zod.number(),
-  "ic_stability": zod.number(),
+  "factor_name": zod.string().optional(),
+  "ic_mean": zod.number().optional(),
+  "ic_stability": zod.number().optional(),
   "ic_ir": zod.number().nullish(),
   "decile_spread_pct": zod.number().nullish(),
   "sector_exposure": zod.number().nullish(),
@@ -1183,7 +1251,8 @@ export const GetDashboardSummaryResponse = zod.object({
   "stale_data_count": zod.number().optional(),
   "reconciliation_alerts": zod.number().optional()
 }),
-  "system_mode": zod.enum(['alert', 'paper', 'manual_broker', 'controlled_automation']).optional(),
+  "system_mode": zod.enum(['research_only', 'alert_only', 'paper_trading', 'manual_confirmation', 'semi_automatic', 'automatic']).optional(),
+  "configured_system_mode": zod.string().optional(),
   "score_date": zod.coerce.date().optional()
 })
 
@@ -1307,6 +1376,23 @@ export const GetAuditHistoryResponse = zod.object({
   "universe_group": zod.string().optional(),
   "horizon": zod.enum(['daily', 'weekly', 'monthly', 'medium', 'long']),
   "state": zod.enum(['strong_buy', 'buy', 'accumulate', 'watch', 'hold', 'reduce', 'sell', 'avoid', 'pending_review', 'no_signal']),
+  "lifecycle_state": zod.enum(['not_eligible', 'insufficient_data', 'preview_only', 'ready', 'entry_pending', 'active', 'exit_pending', 'closed', 'cooldown']),
+  "previous_state": zod.string().nullish(),
+  "completed_bar": zod.boolean(),
+  "source_sealed": zod.boolean(),
+  "confirmed_at": zod.coerce.date().nullish(),
+  "valid_until": zod.coerce.date().nullish(),
+  "cooldown_until": zod.coerce.date().nullish(),
+  "next_session_eligible_at": zod.coerce.date().nullish(),
+  "regime": zod.string().nullish(),
+  "model_version": zod.string().nullish(),
+  "decision_version": zod.string().nullish(),
+  "source_snapshot_id": zod.string().nullish(),
+  "component_breakdown": zod.record(zod.string(), zod.unknown()).nullish(),
+  "eligibility_reason": zod.string().nullish(),
+  "actionable": zod.boolean(),
+  "actionable_score": zod.number().nullish(),
+  "eligibility_checks": zod.record(zod.string(), zod.boolean()).optional(),
   "hss": zod.number(),
   "confidence": zod.number(),
   "stale_penalty": zod.number().optional(),
@@ -1370,8 +1456,11 @@ export const ListFormulaRegistryResponse = zod.object({
  */
 export const GetGovernanceStatusResponse = zod.object({
   "system_mode": zod.string(),
+  "configured_system_mode": zod.string(),
+  "effective_execution_mode": zod.string(),
   "deployment_profile": zod.string(),
   "live_execution_enabled": zod.boolean(),
+  "configured_live_execution_enabled": zod.boolean(),
   "kill_switch_enabled": zod.boolean(),
   "dataset_status": zod.string(),
   "coverage": zod.object({
@@ -1386,6 +1475,12 @@ export const GetGovernanceStatusResponse = zod.object({
   "model": zod.string(),
   "investment": zod.string(),
   "execution": zod.string()
+}),
+  "entry_safety": zod.object({
+  "allow_new_entries": zod.boolean(),
+  "resource_mode": zod.string(),
+  "resource_health_review_required": zod.boolean(),
+  "reason": zod.string()
 }),
   "foundations": zod.object({
   "licensed_sources_registered": zod.boolean(),
@@ -1407,7 +1502,9 @@ export const GetGovernanceSettingsResponse = zod.object({
   "profile": zod.string(),
   "operatingMode": zod.string(),
   "liveExecutionEnabled": zod.boolean(),
-  "killSwitchEnabled": zod.boolean()
+  "killSwitchEnabled": zod.boolean(),
+  "effectiveOperatingMode": zod.string(),
+  "effectiveLiveExecutionEnabled": zod.boolean()
 })
 
 

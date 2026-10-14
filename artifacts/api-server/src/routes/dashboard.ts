@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, eq, sql, desc, isNull, ne, gte } from "drizzle-orm";
-import { db, securitiesTable, signalsTable, hardGatesTable, candidateScoresTable, alertsTable, recentChangesTable, portfolioPositionsTable } from "@workspace/db";
+import { db, securitiesTable, signalsTable, hardGatesTable, candidateScoresTable, alertsTable, recentChangesTable, portfolioPositionsTable, systemSettingsTable } from "@workspace/db";
 import { GetDashboardAlertsQueryParams, GetRecentChangesQueryParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -19,6 +19,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
     staleData,
     activeAlerts,
     portfolioPositions,
+    systemSettings,
   ] = await Promise.all([
     db.select({ status: securitiesTable.status, count: sql<number>`count(*)` })
       .from(securitiesTable).groupBy(securitiesTable.status),
@@ -38,6 +39,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
     db.select({ count: sql<number>`count(*)` }).from(alertsTable)
       .where(and(eq(alertsTable.isRead, false), ne(alertsTable.severity, "info"))),
     db.select().from(portfolioPositionsTable).where(ne(portfolioPositionsTable.status, "closed")),
+    db.select().from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1),
   ]);
 
   const total = uniStats.reduce((s, r) => s + Number(r.count), 0);
@@ -49,6 +51,11 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
 
   const openPositions = Number(portfolioStats.find(r => r.status === "open")?.count ?? 0);
   const paperPositions = Number(portfolioStats.find(r => r.status === "paper")?.count ?? 0);
+  const reviewPositions = portfolioPositions.filter((position) => (
+    Number(position.suitabilityScore ?? 0) < 60
+    || ["avoid", "reduce"].includes(position.currentSignal ?? "")
+    || Number(position.currentPrice) <= 0
+  )).length;
 
   res.json({
     universe_snapshot: {
@@ -79,7 +86,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
       open_positions: openPositions,
       paper_positions: paperPositions,
        unrealized_pnl_pct: totalValueAndCost(portfolioPositions).pnlPct,
-       positions_needing_review: 0,
+        positions_needing_review: reviewPositions,
     },
     top_candidates: topCandidates.map(s => ({
       isin: s.isin,
@@ -104,7 +111,8 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
        stale_data_count: Number(staleData[0]?.count ?? 0),
        reconciliation_alerts: Number(activeAlerts[0]?.count ?? 0),
     },
-    system_mode: "alert",
+    system_mode: "alert_only",
+    configured_system_mode: systemSettings[0]?.operatingMode ?? "alert_only",
     score_date: today,
   });
 });

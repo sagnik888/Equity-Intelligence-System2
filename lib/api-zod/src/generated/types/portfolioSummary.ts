@@ -9,6 +9,11 @@ import type { PortfolioPosition } from './portfolioPosition';
 import type { PortfolioSummarySectorConcentrationItem } from './portfolioSummarySectorConcentrationItem';
 
 export interface PortfolioSummary {
+  operating_mode?: string;
+  configured_operating_mode?: string;
+  live_execution_enabled?: boolean;
+  configured_live_execution_enabled?: boolean;
+  kill_switch_enabled?: boolean;
   total_capital: number;
   invested_capital: number;
   cash?: number;

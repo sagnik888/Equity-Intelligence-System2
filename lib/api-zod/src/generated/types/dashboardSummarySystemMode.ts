@@ -10,8 +10,10 @@ export type DashboardSummarySystemMode = typeof DashboardSummarySystemMode[keyof
 
 
 export const DashboardSummarySystemMode = {
-  alert: 'alert',
-  paper: 'paper',
-  manual_broker: 'manual_broker',
-  controlled_automation: 'controlled_automation',
+  research_only: 'research_only',
+  alert_only: 'alert_only',
+  paper_trading: 'paper_trading',
+  manual_confirmation: 'manual_confirmation',
+  semi_automatic: 'semi_automatic',
+  automatic: 'automatic',
 } as const;

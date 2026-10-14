@@ -9,6 +9,7 @@ import {
   signalsTable,
   candidateScoresTable,
   hardGatesTable,
+  systemSettingsTable,
 } from "@workspace/db";
 import {
   AddPortfolioPositionBody,
@@ -133,6 +134,7 @@ router.delete("/portfolio/:id", async (req, res): Promise<void> => {
 router.get("/portfolio/summary", async (_req, res): Promise<void> => {
   const positions = await db.select().from(portfolioPositionsTable).where(ne(portfolioPositionsTable.status, "closed"));
   const [settings] = await db.select().from(portfolioSettingsTable).where(eq(portfolioSettingsTable.id, 1));
+  const [systemSettings] = await db.select().from(systemSettingsTable).where(eq(systemSettingsTable.id, 1));
   const totalCapital = settings ? parseFloat(settings.capital) : 0;
   const totalValue = positions.reduce((sum, p) => sum + parseFloat(p.currentPrice) * p.quantity, 0);
   const totalCost = positions.reduce((sum, p) => sum + parseFloat(p.entryPrice) * p.quantity, 0);
@@ -164,9 +166,11 @@ router.get("/portfolio/summary", async (_req, res): Promise<void> => {
     top_winners: sorted.slice(0, 3).map(p => mapPosition(p, totalValue)),
     top_losers: sorted.slice(-3).reverse().map(p => mapPosition(p, totalValue)),
      review_required: positions.filter(p => ["reduce", "sell", "avoid", "pending_review"].includes(p.currentSignal ?? "")).map(p => mapPosition(p, totalValue)),
-     operating_mode: settings?.operatingMode ?? "paper",
-     live_execution_enabled: settings?.liveExecutionEnabled ?? false,
-     kill_switch_enabled: settings?.killSwitchEnabled ?? false,
+     operating_mode: "alert_only",
+     configured_operating_mode: systemSettings?.operatingMode ?? "alert_only",
+     live_execution_enabled: false,
+     configured_live_execution_enabled: systemSettings?.liveExecutionEnabled ?? false,
+     kill_switch_enabled: systemSettings?.killSwitchEnabled ?? settings?.killSwitchEnabled ?? false,
   });
 });
 
@@ -235,7 +239,8 @@ router.get("/portfolio/order-intents", async (_req, res): Promise<void> => {
       created_at: intent.createdAt.toISOString(), updated_at: intent.updatedAt.toISOString(),
     })),
     total: intents.length,
-    execution_mode: "paper_only",
+    execution_mode: "alert_only",
+    live_execution_enabled: false,
   });
 });
 
@@ -243,29 +248,31 @@ router.post("/portfolio/order-intents", async (req, res): Promise<void> => {
   const body = req.body as Record<string, unknown>;
   const isin = typeof body.isin === "string" ? body.isin : "";
   const side = body.side === "buy" || body.side === "sell" ? body.side : null;
-  const quantity = Number(body.quantity);
+  const quantity = body.quantity;
   const idempotencyKey = typeof body.idempotency_key === "string" ? body.idempotency_key : "";
-  if (!isin || !side || !Number.isInteger(quantity) || quantity <= 0 || !idempotencyKey) {
+  if (!isin || !side || typeof quantity !== "number" || !Number.isSafeInteger(quantity) || quantity <= 0 || !idempotencyKey) {
     res.status(400).json({ error: "isin, side, positive integer quantity, and idempotency_key are required" }); return;
   }
-  const [existing] = await db.select().from(paperOrderIntentsTable).where(eq(paperOrderIntentsTable.idempotencyKey, idempotencyKey));
-  if (existing) {
-    res.status(200).json({ duplicate: true, execution_mode: "paper_only", id: existing.id, status: existing.status }); return;
+  const orderType = body.order_type ?? "limit";
+  if (orderType !== "market" && orderType !== "limit") {
+    res.status(400).json({ error: "order_type must be market or limit" }); return;
   }
-  const [security] = await db.select().from(securitiesTable).where(eq(securitiesTable.isin, isin));
-  if (!security) { res.status(404).json({ error: "Security not found" }); return; }
-  const orderType = body.order_type === "market" ? "market" : "limit";
-  const limitPrice = body.limit_price == null ? null : Number(body.limit_price);
-  if (orderType === "limit" && (limitPrice == null || !Number.isFinite(limitPrice) || limitPrice <= 0)) {
+  const limitPrice = body.limit_price == null ? null : body.limit_price;
+  if (orderType === "limit" && (typeof limitPrice !== "number" || !Number.isFinite(limitPrice) || limitPrice <= 0)) {
     res.status(400).json({ error: "A positive limit_price is required for limit orders" }); return;
   }
-  const [created] = await db.insert(paperOrderIntentsTable).values({
-    idempotencyKey, isin, ticker: security.ticker, side, orderType,
-    quantity, limitPrice: limitPrice == null ? null : String(limitPrice),
-    rationale: typeof body.rationale === "string" ? body.rationale : null,
-    status: "draft", createdBy: "api",
-  }).returning();
-  res.status(201).json({ id: created!.id, status: created!.status, execution_mode: "paper_only", live_execution_enabled: false });
+  res.status(409).json({
+    error: "Order-intent creation is disabled in this research/alert-only build.",
+    execution_mode: "alert_only",
+    blocked_reasons: [
+      "Separate paper-trading acceptance has not been recorded.",
+      "No authenticated account and role context is available.",
+      "No active cryptographically verified account/strategy risk policy is configured.",
+      "No active broker order-policy evidence or broker adapter is configured.",
+      "Licensed sealed market data, approved strategy evidence, and reconciled account exposure are not available.",
+      "A transactional outbox dispatcher and fill-reconciliation path are not active.",
+    ],
+  });
 });
 
 router.post("/portfolio/size", async (req, res): Promise<void> => {
@@ -273,7 +280,7 @@ router.post("/portfolio/size", async (req, res): Promise<void> => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const { isin, entry_price, stop_price, portfolio_capital,
-    risk_percent_per_unit = 1.0, allowed_participation_rate = 0.1,
+    risk_percent_per_unit, allowed_participation_rate = 0.1,
     max_exit_days = 10, max_company_weight = 0.1, max_sector_weight = 0.25,
     estimated_roundtrip_cost_pct = 0.3 } = parsed.data;
 
@@ -282,7 +289,8 @@ router.post("/portfolio/size", async (req, res): Promise<void> => {
 
   const ticker = security.ticker;
   const name = security.name;
-  const medianDtv = security.medianDailyTradedValueCr ? parseFloat(security.medianDailyTradedValueCr) : 5;
+  const rawMedianDtv = security.medianDailyTradedValueCr ? parseFloat(security.medianDailyTradedValueCr) : Number.NaN;
+  const medianDtv = Number.isFinite(rawMedianDtv) && rawMedianDtv > 0 ? rawMedianDtv : null;
 
   const currentPositions = await db.select().from(portfolioPositionsTable)
     .where(ne(portfolioPositionsTable.status, "closed"));
@@ -296,7 +304,11 @@ router.post("/portfolio/size", async (req, res): Promise<void> => {
     .filter((position) => position.horizon === "medium")
     .reduce((total, position) => total + parseFloat(position.currentPrice) * position.quantity, 0);
 
-  const sized = positionSizingV2({
+  const canCalculatePreview = medianDtv !== null
+    && typeof risk_percent_per_unit === "number"
+    && Number.isFinite(risk_percent_per_unit)
+    && risk_percent_per_unit > 0;
+  const sized = canCalculatePreview ? positionSizingV2({
     accountCapital: portfolio_capital,
     riskPercent: risk_percent_per_unit,
     entryPrice: entry_price,
@@ -313,23 +325,34 @@ router.post("/portfolio/size", async (req, res): Promise<void> => {
     currentSectorValue,
     currentHorizonValue,
     roundTripCostPct: estimated_roundtrip_cost_pct,
-  });
+  }) : null;
 
   res.json({
     isin,
     ticker,
     name,
-    final_quantity: sized.finalQuantity,
-    quantity_by_risk: sized.quantityByRisk,
-    quantity_by_liquidity: sized.quantityByLiquidity,
-    quantity_by_company_cap: sized.quantityByCompanyCap,
-    quantity_by_sector_cap: sized.quantityBySectorCap,
-    binding_constraint: sized.bindingConstraint === "event_risk_cap" ? "event_cap" : sized.bindingConstraint,
-    position_value: sized.finalPositionValue,
-    portfolio_weight_pct: sized.portfolioWeightPct,
-    risk_amount: sized.riskAmount,
+    executable: false,
+    status: "preview_only",
+    blocked_reasons: [
+      "No active signed, cryptographically verified account/strategy risk policy is available.",
+      "Exchange and broker lot size is not verified for this instrument.",
+      "Reconciled pending commitments and all 7.1.4 residual exposure caps are not available.",
+      "This demo calculation is not approved as a trade quantity.",
+    ],
+    final_quantity: 0,
+    preview_quantity: sized?.finalQuantity ?? null,
+    preview_method: "legacy_demo_estimate_not_for_ordering",
+    quantity_by_risk: sized?.quantityByRisk ?? null,
+    quantity_by_liquidity: sized?.quantityByLiquidity ?? null,
+    quantity_by_company_cap: sized?.quantityByCompanyCap ?? null,
+    quantity_by_sector_cap: sized?.quantityBySectorCap ?? null,
+    binding_constraint: sized ? (sized.bindingConstraint === "event_risk_cap" ? "event_cap" : sized.bindingConstraint) : null,
+    position_value: 0,
+    preview_position_value: sized?.finalPositionValue ?? null,
+    portfolio_weight_pct: 0,
+    risk_amount: 0,
     median_daily_traded_value_cr: medianDtv,
-    estimated_exit_days: sized.estimatedExitDays,
+    estimated_exit_days: sized?.estimatedExitDays ?? null,
   });
 });
 

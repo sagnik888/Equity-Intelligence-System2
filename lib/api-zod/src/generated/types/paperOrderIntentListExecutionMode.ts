@@ -10,5 +10,7 @@ export type PaperOrderIntentListExecutionMode = typeof PaperOrderIntentListExecu
 
 
 export const PaperOrderIntentListExecutionMode = {
-  paper_only: 'paper_only',
+  research_only: 'research_only',
+  alert_only: 'alert_only',
+  paper_trading: 'paper_trading',
 } as const;

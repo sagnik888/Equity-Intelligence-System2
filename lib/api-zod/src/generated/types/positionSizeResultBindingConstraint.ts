@@ -6,7 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type PositionSizeResultBindingConstraint = typeof PositionSizeResultBindingConstraint[keyof typeof PositionSizeResultBindingConstraint];
+/**
+ * @nullable
+ */
+export type PositionSizeResultBindingConstraint = typeof PositionSizeResultBindingConstraint[keyof typeof PositionSizeResultBindingConstraint] | null;
 
 
 export const PositionSizeResultBindingConstraint = {

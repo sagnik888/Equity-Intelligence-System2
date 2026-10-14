@@ -12,14 +12,15 @@ import type { ReactNode } from "react";
 
 const NAV_ITEMS = [
   { path: "/",           label: "Dashboard",    icon: LayoutDashboard, hint: "Cockpit" },
-  { path: "/universe",   label: "Universe",     icon: Globe2,          hint: "2,000+ stocks" },
+  { path: "/universe",   label: "Universe",     icon: Globe2,          hint: "Demo universe" },
   { path: "/signals",    label: "Signals",      icon: Zap,             hint: "5 horizons" },
   { path: "/rankings",   label: "Rankings",     icon: BarChart3,       hint: "17 dimensions" },
+  { path: "/scores",     label: "Scores",       icon: BarChart3,       hint: "Candidate engine" },
   { path: "/hardgates",  label: "Hard Gates",   icon: ShieldAlert,     hint: "Exclusion engine" },
-   { path: "/portfolio",  label: "Portfolio",    icon: Briefcase,       hint: "Paper only" },
-  { path: "/research",   label: "Research",     icon: Microscope,      hint: "Deep coverage" },
+   { path: "/portfolio",  label: "Portfolio",    icon: Briefcase,       hint: "Demo positions" },
+  { path: "/research",   label: "Research",     icon: Microscope,      hint: "Demo research" },
   { path: "/watchlists", label: "Watchlists",   icon: BookMarked,      hint: "Smart lists" },
-  { path: "/backtest",   label: "Backtest",     icon: FlaskConical,    hint: "Walk-forward" },
+  { path: "/backtest",   label: "Backtest",     icon: FlaskConical,    hint: "Demo results" },
   { path: "/audit",      label: "Audit",        icon: ScrollText,      hint: "Time-machine" },
   { path: "/governance", label: "Governance",   icon: Settings2,       hint: "Controls" },
 ];
@@ -57,7 +58,7 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
             <div>
               <div className="text-xs font-bold text-foreground tracking-wide">IEIS</div>
-              <div className="text-[10px] text-muted-foreground">v7.2 · Paper Mode</div>
+               <div className="text-[10px] text-muted-foreground">Spec 7.1.4 · Alert only</div>
             </div>
           </div>
         </div>
@@ -84,7 +85,7 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
            <div className="mt-2 flex items-center gap-1.5">
              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-             <span className="text-[10px] text-muted-foreground">Alert + paper · live disabled</span>
+              <span className="text-[10px] text-muted-foreground">Research preview · orders blocked</span>
           </div>
         </div>
       </aside>

@@ -6,18 +6,32 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PositionSizeResultBindingConstraint } from './positionSizeResultBindingConstraint';
+import type { PositionSizeResultStatus } from './positionSizeResultStatus';
 
 export interface PositionSizeResult {
   isin: string;
   ticker: string;
   name: string;
+  executable: boolean;
+  status: PositionSizeResultStatus;
+  blocked_reasons: string[];
   final_quantity: number;
-  quantity_by_risk?: number;
-  quantity_by_liquidity?: number;
-  quantity_by_company_cap?: number;
-  quantity_by_sector_cap?: number;
+  /** @nullable */
+  preview_quantity: number | null;
+  preview_method?: string;
+  /** @nullable */
+  quantity_by_risk?: number | null;
+  /** @nullable */
+  quantity_by_liquidity?: number | null;
+  /** @nullable */
+  quantity_by_company_cap?: number | null;
+  /** @nullable */
+  quantity_by_sector_cap?: number | null;
+  /** @nullable */
   binding_constraint: PositionSizeResultBindingConstraint;
   position_value?: number;
+  /** @nullable */
+  preview_position_value?: number | null;
   portfolio_weight_pct?: number;
   risk_amount?: number;
   /** @nullable */

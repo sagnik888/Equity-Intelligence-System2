@@ -6,18 +6,23 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { GovernanceStatusCoverage } from './governanceStatusCoverage';
+import type { GovernanceStatusEntrySafety } from './governanceStatusEntrySafety';
 import type { GovernanceStatusFoundations } from './governanceStatusFoundations';
 import type { GovernanceStatusResources } from './governanceStatusResources';
 import type { GovernanceStatusValidation } from './governanceStatusValidation';
 
 export interface GovernanceStatus {
   system_mode: string;
+  configured_system_mode: string;
+  effective_execution_mode: string;
   deployment_profile: string;
   live_execution_enabled: boolean;
+  configured_live_execution_enabled: boolean;
   kill_switch_enabled: boolean;
   dataset_status: string;
   coverage: GovernanceStatusCoverage;
   validation: GovernanceStatusValidation;
+  entry_safety: GovernanceStatusEntrySafety;
   foundations: GovernanceStatusFoundations;
   resources?: GovernanceStatusResources;
   generated_at: Date;

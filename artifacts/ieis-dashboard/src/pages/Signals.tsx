@@ -56,7 +56,7 @@ export default function Signals() {
     <div className="p-6 space-y-5">
       <div>
         <h1 className="text-xl font-bold">Signal Monitor</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">HSS-driven state machine · 5 horizons</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Research preview · seeded demo data · not actionable</p>
       </div>
 
       {/* Horizon summary grid */}
@@ -91,7 +91,7 @@ export default function Signals() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Zap className="h-3.5 w-3.5 text-emerald-400" />
-              Top Buy Signals Today
+              Highest HSS Research Previews
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -138,7 +138,7 @@ export default function Signals() {
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border bg-card/50">
-              {["Ticker", "Name", "Sector", "Horizon", "State", "HSS", "Confidence", "Candidate", "Days", "Price"].map(h => (
+              {["Ticker", "Name", "Sector", "Horizon", "State", "Lifecycle", "Action", "HSS", "Confidence", "Candidate", "Days", "Price"].map(h => (
                 <th key={h} className={cn("py-2 px-3 text-muted-foreground font-medium whitespace-nowrap", h === "Ticker" ? "text-left" : "text-right")}>{h}</th>
               ))}
             </tr>
@@ -147,7 +147,7 @@ export default function Signals() {
             {isLoading
               ? Array.from({ length: 12 }).map((_, i) => (
                   <tr key={i} className="border-b border-border/50">
-                    {Array.from({ length: 10 }).map((_, j) => <td key={j} className="px-3 py-2"><Skeleton className="h-4" /></td>)}
+                    {Array.from({ length: 12 }).map((_, j) => <td key={j} className="px-3 py-2"><Skeleton className="h-4" /></td>)}
                   </tr>
                 ))
               : (data?.items ?? []).map((sig, i) => (
@@ -164,6 +164,14 @@ export default function Signals() {
                       <Badge variant="outline" className={cn("text-[10px] px-1.5", STATE_STYLE[sig.state] ?? "")}>
                         {STATE_LABEL[sig.state] ?? sig.state}
                       </Badge>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Badge variant="outline" className="text-[10px] px-1.5 border-amber-500/30 text-amber-300">
+                        {(sig.lifecycle_state ?? "insufficient_data").replaceAll("_", " ")}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-2 text-right text-amber-300 whitespace-nowrap">
+                      {sig.actionable ? "Eligible" : "No action"}
                     </td>
                     <td className="px-3 py-2 text-right min-w-[100px]">
                       <HssBar value={sig.hss} />

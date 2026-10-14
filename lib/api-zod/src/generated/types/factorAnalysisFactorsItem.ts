@@ -8,9 +8,9 @@
 import type { FactorAnalysisFactorsItemCorrelationWithOthersItem } from './factorAnalysisFactorsItemCorrelationWithOthersItem';
 
 export type FactorAnalysisFactorsItem = {
-  factor_name: string;
-  ic_mean: number;
-  ic_stability: number;
+  factor_name?: string;
+  ic_mean?: number;
+  ic_stability?: number;
   /** @nullable */
   ic_ir?: number | null;
   /** @nullable */

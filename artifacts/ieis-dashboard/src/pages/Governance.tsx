@@ -4,7 +4,6 @@ import {
   useGetGovernanceSettings,
   useListConnectorHealth,
   useListAcceptanceGates,
-  useGetResourceState,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,14 +25,12 @@ export default function Governance() {
   const { data: settings } = useGetGovernanceSettings();
   const { data: connectors } = useListConnectorHealth();
   const { data: gates } = useListAcceptanceGates();
-  const { data: resources } = useGetResourceState();
 
   if (isLoading) return <div className="p-6 space-y-4"><Skeleton className="h-8 w-72" /><div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}</div></div>;
 
   const validation = status?.validation as Record<string, string> | undefined;
   const gateRows = (gates?.gates ?? []) as Array<Record<string, any>>;
   const adapterRows = (connectors?.adapters ?? []) as Array<Record<string, any>>;
-  const resource = resources?.current as Record<string, any> | null | undefined;
   const validationCards: Array<{ label: string; value?: string; Icon: LucideIcon }> = [
     { label: "Architecture", value: validation?.architecture, Icon: ShieldCheck },
     { label: "Data", value: validation?.data, Icon: Database },
@@ -74,10 +71,11 @@ export default function Governance() {
           <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Gauge className="h-4 w-4" /> Operating safety</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-xs">
             <div className="flex justify-between"><span className="text-muted-foreground">Profile</span><span>{settings?.profile ?? status?.deployment_profile}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Mode</span><StateBadge value={settings?.operatingMode ?? status?.system_mode} /></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Live execution</span><span className="text-amber-400">Disabled</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Configured mode</span><StateBadge value={settings?.operatingMode ?? status?.configured_system_mode} /></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Effective mode</span><StateBadge value={status?.effective_execution_mode ?? "alert_only"} /></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Live execution</span><span className="text-amber-400">{status?.live_execution_enabled ? "Enabled" : "Disabled"}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Kill switch</span><span>{settings?.killSwitchEnabled ? "Enabled" : "Standby"}</span></div>
-            <div className="border-t border-border pt-3"><p className="text-muted-foreground mb-1">Resource governor</p><StateBadge value={resource?.mode ?? "not_configured"} /></div>
+            <div className="border-t border-border pt-3"><p className="text-muted-foreground mb-1">Effective entry safety</p><StateBadge value={status?.entry_safety.resource_mode ?? "not_configured"} /></div>
           </CardContent>
         </Card>
       </div>
@@ -96,7 +94,7 @@ export default function Governance() {
         <Card className="border-border">
           <CardHeader className="pb-3"><CardTitle className="text-sm">Execution boundary</CardTitle></CardHeader>
           <CardContent className="text-xs text-muted-foreground space-y-2">
-            <p>Signals and portfolio actions remain alert-only or paper-trading until data, investment, and execution gates are independently approved.</p>
+            <p>Signals are research previews; paper and live order paths remain blocked until the required data, investment, resource, account, and execution gates pass.</p>
             <p>Missing source records, revisions, and corporate actions are surfaced as unavailable or pending review rather than replaced with fabricated values.</p>
           </CardContent>
         </Card>

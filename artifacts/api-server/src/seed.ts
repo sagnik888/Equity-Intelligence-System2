@@ -1,5 +1,5 @@
 /**
- * IEIS v7.2 — Seed script
+ * IEIS demonstration seed script (7.1.4 safety state)
  * Populates all tables with realistic Indian equity data.
  * Run: pnpm --filter @workspace/api-server tsx src/seed.ts
  */
@@ -33,12 +33,20 @@ import { calculateCandidateScore } from "./lib/scoring";
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function n(v: number, d = 2) { return v.toFixed(d); }
-function rnd(lo: number, hi: number) { return lo + Math.random() * (hi - lo); }
-function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]!; }
 
-const TODAY = new Date().toISOString().split("T")[0]!;
+// Demo fixtures must be reproducible. This is not a market-data source.
+let randomState = 0x9e3779b9;
+function randomUnit() {
+  randomState = (Math.imul(1664525, randomState) + 1013904223) >>> 0;
+  return randomState / 0x100000000;
+}
+function rnd(lo: number, hi: number) { return lo + randomUnit() * (hi - lo); }
+function pick<T>(arr: T[]): T { return arr[Math.floor(randomUnit() * arr.length)]!; }
+
+const SEED_NOW = new Date("2026-09-14T12:00:00+05:30");
+const TODAY = SEED_NOW.toISOString().split("T")[0]!;
 function daysAgo(d: number) {
-  const dt = new Date();
+  const dt = new Date(SEED_NOW);
   dt.setDate(dt.getDate() - d);
   return dt.toISOString().split("T")[0]!;
 }
@@ -138,10 +146,17 @@ function signalState(hss: number): "strong_buy" | "buy" | "accumulate" | "watch"
 // ─── TRUNCATE + SEED ──────────────────────────────────────────────────────────
 
 async function truncateAll() {
+  if (process.env.NODE_ENV === "production" || process.env.IEIS_ALLOW_DEMO_RESET !== "true") {
+    throw new Error("Refusing destructive demo reset. Set IEIS_ALLOW_DEMO_RESET=true in a non-production environment.");
+  }
   const tables = [
     "immutable_audit_logs", "acceptance_gates", "jobs", "resource_snapshots",
     "model_registry", "feature_definitions", "raw_data_records", "connector_requests",
     "connector_adapters", "data_licenses", "system_settings",
+    "broker_fills", "broker_order_attempts", "order_outbox", "risk_reservations",
+    "broker_order_policies", "risk_policies", "virtual_lots",
+    "security_identifier_history", "sector_history", "index_membership_history", "entity_mapping_review_queue",
+    "data_sources", "point_in_time_facts", "corporate_actions", "security_status_history",
     "recent_changes", "alerts", "watchlist_entries", "evidence_ledger",
     "paper_order_intents", "portfolio_settings",
     "research_scores", "signal_history", "signals", "portfolio_positions",
@@ -210,18 +225,18 @@ async function seedControls() {
     modelVersion: "7.2",
     featureVersions: { data_confidence: "2.0", candidate_score: "2.0" },
     hardGateVersion: "7.2",
-    approvalStatus: "approved",
-    deploymentDate: new Date(),
-    mode: "champion",
+    approvalStatus: "pending_review",
+    deploymentDate: SEED_NOW,
+    mode: "experimental",
     comparisonSummary: { dataset: "seeded_demo", investmentValidated: false },
   });
 
   await db.insert(acceptanceGatesTable).values([
-    { gateKey: "architecture", gateName: "Architecture validated", category: "release", status: "healthy", checkedAt: new Date(), checkedBy: "system", notes: "Contract and workflow checks passed." },
-    { gateKey: "code", gateName: "Code validated", category: "release", status: "healthy", checkedAt: new Date(), checkedBy: "system", notes: "Typecheck and build checks passed." },
-    { gateKey: "data", gateName: "Data validated", category: "release", status: "warning", checkedAt: new Date(), checkedBy: "system", notes: "Demo dataset only; licensed source and PIT coverage are not configured." },
-    { gateKey: "investment", gateName: "Investment validated", category: "release", status: "not_configured", checkedAt: new Date(), checkedBy: "system", notes: "No production walk-forward validation has been approved." },
-    { gateKey: "execution", gateName: "Execution readiness", category: "safety", status: "warning", checkedAt: new Date(), checkedBy: "system", notes: "Alert and paper modes only; live execution remains disabled." },
+    { gateKey: "architecture", gateName: "Architecture release review", category: "release", status: "warning", checkedAt: SEED_NOW, checkedBy: "system", notes: "Local contract/workflow checks are not independent release certification." },
+    { gateKey: "code", gateName: "Code release review", category: "release", status: "warning", checkedAt: SEED_NOW, checkedBy: "system", notes: "Local typecheck/build pass; signed release approval is not recorded." },
+    { gateKey: "data", gateName: "Data validated", category: "release", status: "warning", checkedAt: SEED_NOW, checkedBy: "system", notes: "Demo dataset only; licensed source and PIT coverage are not configured." },
+    { gateKey: "investment", gateName: "Investment validated", category: "release", status: "not_configured", checkedAt: SEED_NOW, checkedBy: "system", notes: "No production walk-forward validation has been approved." },
+    { gateKey: "execution", gateName: "Execution readiness", category: "safety", status: "warning", checkedAt: SEED_NOW, checkedBy: "system", notes: "Research/alert-only; separate paper-trading acceptance is absent and live execution remains disabled." },
   ]);
 
   await db.insert(resourceSnapshotsTable).values({
@@ -399,7 +414,10 @@ async function seedSignals() {
 
       await db.insert(signalsTable).values({
         isin: s.isin, ticker: s.ticker, name: s.name, sector: s.sector, universeGroup: s.group,
-        horizon: h, state: state as any, hss: n(cappeHss), confidence: n(confidence),
+        horizon: h, state: state as any, lifecycleState: "preview_only",
+        completedBar: false, sourceSealed: false,
+        eligibilityReason: "Seeded demonstration data; no licensed sealed market-data source or approved strategy.",
+        hss: n(cappeHss), confidence: n(confidence),
         stalePenalty: n(stalePenalty), eventPenalty: n(eventPenalty), riskPenalty: n(riskPenalty),
         hardGateCap: hardGateCap,
         alignmentScore: n(rnd(40, 90)),
@@ -426,7 +444,7 @@ async function seedSignals() {
 async function seedPortfolio() {
   await db.insert(portfolioSettingsTable).values({
     id: 1, capital: "10000000", cashReservePct: "0.05",
-    operatingMode: "paper", liveExecutionEnabled: false, killSwitchEnabled: false,
+    operatingMode: "alert_only", liveExecutionEnabled: false, killSwitchEnabled: false,
   });
   const positions = [
     { isin: "INE467B01029", ticker: "TCS", name: "Tata Consultancy Services", sector: "Technology", qty: 150, entry: 3720, current: 3970, stop: 3350, target: 4400, horizon: "long", status: "open", score: 88.4, signal: "strong_buy" },
@@ -629,11 +647,11 @@ async function seedAlertsAndChanges() {
   await db.insert(alertsTable).values([
     { type: "hard_gate_level1" as any, severity: "critical" as any, isin: "INE880J01026", ticker: "YESBANK", title: "Level 1 Hard Gate Active", message: "Yes Bank: Promoter pledge breach and auditor qualification persist. Stock excluded from all ranking and signal systems.", isRead: false },
     { type: "gate_triggered" as any, severity: "high" as any, isin: "INE003A01024", ticker: "SUZLON", title: "Level 2 Gate: Score Capped at 55", message: "Suzlon Energy: Debt covenant risk. Candidate score capped at 55 pending two consecutive clean quarters.", isRead: false },
-    { type: "signal_change" as any, severity: "medium" as any, isin: "INE467B01029", ticker: "TCS", title: "Signal Upgrade: TCS Daily → Strong Buy", message: "TCS daily HSS crossed 75 threshold. Multi-horizon alignment confirmed. Consider position entry.", isRead: false },
+    { type: "signal_change" as any, severity: "medium" as any, isin: "INE467B01029", ticker: "TCS", title: "Signal Upgrade: TCS Daily → Strong Buy", message: "Demo signal-state change only. Scores are not trade permission; research review is required.", isRead: false },
     { type: "signal_change" as any, severity: "medium" as any, isin: "INE009A01021", ticker: "INFY", title: "Signal Change: Infosys Monthly Hold → Buy", message: "Monthly HSS improved from 52 to 68 following positive Q1 guidance. Alignment with long-term signal strengthened.", isRead: true },
     { type: "data_stale" as any, severity: "low" as any, isin: null, ticker: null, title: "12 Securities: Data Refresh Pending", message: "12 small-cap securities have not received updated financial data in 45+ days. Data confidence degraded.", isRead: true },
     { type: "portfolio_review" as any, severity: "high" as any, isin: null, ticker: null, title: "Portfolio Rebalancing Window Open", message: "Monthly rebalancing window (last 3 trading days of month). Review positions against current signals before close.", isRead: false },
-    { type: "system" as any, severity: "info" as any, isin: null, ticker: null, title: "IEIS v7.2 — System Fully Operational", message: "All scoring, signal, and ranking engines running in alert/paper mode. Live trading integration pending broker API setup.", isRead: true },
+    { type: "system" as any, severity: "info" as any, isin: null, ticker: null, title: "IEIS demo environment — research only", message: "Seeded research features are available. Market data and investment validation are incomplete; paper and live order paths are blocked.", isRead: true },
   ]);
 
   await db.insert(recentChangesTable).values([
@@ -649,7 +667,7 @@ async function seedAlertsAndChanges() {
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log("🌱 Seeding IEIS v7.2 database…");
+  console.log("🌱 Seeding IEIS 7.1.4 demonstration data…");
   await truncateAll();
   await seedControls();
   await seedSecurities();

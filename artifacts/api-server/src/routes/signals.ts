@@ -6,10 +6,32 @@ import {
   GetStockSignalsParams,
   GetTopBuySignalsQueryParams,
 } from "@workspace/api-zod";
+import { actionableScoreV3, checkTradeSignalEligibility } from "../lib/safetyControls";
 
 const router: IRouter = Router();
 
 function mapSignal(s: typeof signalsTable.$inferSelect) {
+  const previewOnlySeed = !s.sourceSnapshotId && !s.sourceSealed && !s.completedBar;
+  const lifecycleState = previewOnlySeed && s.lifecycleState === "insufficient_data"
+    ? "preview_only"
+    : s.lifecycleState;
+  const signalConfidence = s.confidence ? parseFloat(s.confidence) : 0;
+  const readiness = checkTradeSignalEligibility({
+    licensedSource: false,
+    sealedData: s.sourceSealed,
+    noLevel1Gate: false,
+    approvedStrategy: false,
+    dataConfidence: 0,
+    minimumDataConfidence: 100,
+    signalConfidence,
+    minimumSignalConfidence: 100,
+  });
+  const actionableScore = actionableScoreV3({
+    rawScore: s.hss ? parseFloat(s.hss) : 0,
+    confidence: signalConfidence,
+    eligible: readiness.eligible,
+    hardGateCap: s.hardGateCap ? parseFloat(s.hardGateCap) : null,
+  });
   return {
     isin: s.isin,
     ticker: s.ticker,
@@ -18,6 +40,24 @@ function mapSignal(s: typeof signalsTable.$inferSelect) {
     universe_group: s.universeGroup,
     horizon: s.horizon,
     state: s.state,
+    lifecycle_state: lifecycleState,
+    previous_state: s.previousState,
+    completed_bar: s.completedBar,
+    source_sealed: s.sourceSealed,
+    confirmed_at: s.confirmedAt?.toISOString() ?? null,
+    valid_until: s.validUntil?.toISOString() ?? null,
+    cooldown_until: s.cooldownUntil?.toISOString() ?? null,
+    next_session_eligible_at: s.nextSessionEligibleAt?.toISOString() ?? null,
+    regime: s.regime,
+    model_version: s.modelVersion,
+    decision_version: s.decisionVersion,
+    source_snapshot_id: s.sourceSnapshotId,
+    component_breakdown: s.componentBreakdown,
+    eligibility_reason: s.eligibilityReason
+      ?? (previewOnlySeed ? "Seeded demonstration data; no licensed sealed market-data source or approved strategy." : null),
+    actionable: readiness.eligible,
+    actionable_score: actionableScore,
+    eligibility_checks: readiness.checks,
     hss: s.hss ? parseFloat(s.hss) : 0,
     confidence: s.confidence ? parseFloat(s.confidence) : 0,
     stale_penalty: s.stalePenalty ? parseFloat(s.stalePenalty) : 0,

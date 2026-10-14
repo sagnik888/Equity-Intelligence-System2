@@ -537,6 +537,12 @@ paths:
           description: Existing intent returned for duplicate idempotency key
         "400":
           description: Invalid order intent
+        "409":
+          description: Order creation blocked until required controls and paper-trading acceptance pass
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionBlockedResponse"
 
   # ─── Research ─────────────────────────────────────────────────────────────────
   /research:
@@ -941,11 +947,14 @@ components:
 
     GovernanceStatus:
       type: object
-      required: [system_mode, deployment_profile, live_execution_enabled, kill_switch_enabled, dataset_status, coverage, validation, foundations, generated_at]
+      required: [system_mode, configured_system_mode, effective_execution_mode, deployment_profile, live_execution_enabled, configured_live_execution_enabled, kill_switch_enabled, dataset_status, coverage, validation, entry_safety, foundations, generated_at]
       properties:
         system_mode: { type: string }
+        configured_system_mode: { type: string }
+        effective_execution_mode: { type: string }
         deployment_profile: { type: string }
         live_execution_enabled: { type: boolean }
+        configured_live_execution_enabled: { type: boolean }
         kill_switch_enabled: { type: boolean }
         dataset_status: { type: string }
         coverage:
@@ -965,6 +974,14 @@ components:
             model: { type: string }
             investment: { type: string }
             execution: { type: string }
+        entry_safety:
+          type: object
+          required: [allow_new_entries, resource_mode, resource_health_review_required, reason]
+          properties:
+            allow_new_entries: { type: boolean }
+            resource_mode: { type: string }
+            resource_health_review_required: { type: boolean }
+            reason: { type: string }
         foundations:
           type: object
           required: [licensed_sources_registered, source_adapters_registered, point_in_time_facts, corporate_actions, acceptance_gates_registered]
@@ -983,13 +1000,15 @@ components:
     GovernanceSettings:
       type: object
       additionalProperties: true
-      required: [id, profile, operatingMode, liveExecutionEnabled, killSwitchEnabled]
+      required: [id, profile, operatingMode, liveExecutionEnabled, killSwitchEnabled, effectiveOperatingMode, effectiveLiveExecutionEnabled]
       properties:
         id: { type: integer }
         profile: { type: string }
         operatingMode: { type: string }
         liveExecutionEnabled: { type: boolean }
         killSwitchEnabled: { type: boolean }
+        effectiveOperatingMode: { type: string }
+        effectiveLiveExecutionEnabled: { type: boolean }
 
     DataLicenseList:
       type: object
@@ -1432,7 +1451,7 @@ components:
     # ─── Signals ──────────────────────────────────────────────────────────────
     Signal:
       type: object
-      required: [isin, ticker, name, sector, horizon, state, hss, confidence, signal_date]
+      required: [isin, ticker, name, sector, horizon, state, lifecycle_state, actionable, completed_bar, source_sealed, hss, confidence, signal_date]
       properties:
         isin: { type: string }
         ticker: { type: string }
@@ -1445,6 +1464,27 @@ components:
         state:
           type: string
           enum: [strong_buy, buy, accumulate, watch, hold, reduce, sell, avoid, pending_review, no_signal]
+        lifecycle_state:
+          type: string
+          enum: [not_eligible, insufficient_data, preview_only, ready, entry_pending, active, exit_pending, closed, cooldown]
+        previous_state: { type: ["string", "null"] }
+        completed_bar: { type: boolean }
+        source_sealed: { type: boolean }
+        confirmed_at: { type: ["string", "null"], format: date-time }
+        valid_until: { type: ["string", "null"], format: date-time }
+        cooldown_until: { type: ["string", "null"], format: date-time }
+        next_session_eligible_at: { type: ["string", "null"], format: date-time }
+        regime: { type: ["string", "null"] }
+        model_version: { type: ["string", "null"] }
+        decision_version: { type: ["string", "null"] }
+        source_snapshot_id: { type: ["string", "null"] }
+        component_breakdown: { type: ["object", "null"], additionalProperties: true }
+        eligibility_reason: { type: ["string", "null"] }
+        actionable: { type: boolean }
+        actionable_score: { type: ["number", "null"] }
+        eligibility_checks:
+          type: object
+          additionalProperties: { type: boolean }
         hss: { type: number }
         confidence: { type: number }
         stale_penalty: { type: number }
@@ -1561,6 +1601,11 @@ components:
       type: object
       required: [total_capital, invested_capital, unrealized_pnl, unrealized_pnl_pct, positions_count]
       properties:
+        operating_mode: { type: string }
+        configured_operating_mode: { type: string }
+        live_execution_enabled: { type: boolean }
+        configured_live_execution_enabled: { type: boolean }
+        kill_switch_enabled: { type: boolean }
         total_capital: { type: number }
         invested_capital: { type: number }
         cash: { type: number }
@@ -1652,7 +1697,7 @@ components:
         entry_price: { type: number }
         stop_price: { type: number }
         portfolio_capital: { type: number }
-        risk_percent_per_unit: { type: number, default: 1.0 }
+        risk_percent_per_unit: { type: number, minimum: 0, maximum: 100 }
         allowed_participation_rate: { type: number, default: 0.1 }
         max_exit_days: { type: integer, default: 10 }
         max_company_weight: { type: number, default: 0.1 }
@@ -1661,20 +1706,28 @@ components:
 
     PositionSizeResult:
       type: object
-      required: [isin, ticker, name, final_quantity, binding_constraint]
+      required: [isin, ticker, name, executable, status, blocked_reasons, final_quantity, preview_quantity, binding_constraint]
       properties:
         isin: { type: string }
         ticker: { type: string }
         name: { type: string }
+        executable: { type: boolean }
+        status: { type: string, enum: [preview_only, executable] }
+        blocked_reasons:
+          type: array
+          items: { type: string }
         final_quantity: { type: integer }
-        quantity_by_risk: { type: integer }
-        quantity_by_liquidity: { type: integer }
-        quantity_by_company_cap: { type: integer }
-        quantity_by_sector_cap: { type: integer }
+        preview_quantity: { type: ["integer", "null"] }
+        preview_method: { type: string }
+        quantity_by_risk: { type: ["integer", "null"] }
+        quantity_by_liquidity: { type: ["integer", "null"] }
+        quantity_by_company_cap: { type: ["integer", "null"] }
+        quantity_by_sector_cap: { type: ["integer", "null"] }
         binding_constraint:
-          type: string
+          type: ["string", "null"]
           enum: [risk, liquidity, company_cap, sector_cap, horizon_cap, event_cap]
         position_value: { type: number }
+        preview_position_value: { type: ["number", "null"] }
         portfolio_weight_pct: { type: number }
         risk_amount: { type: number }
         median_daily_traded_value_cr: { type: ["number", "null"] }
@@ -1728,13 +1781,24 @@ components:
 
     PaperOrderIntentList:
       type: object
-      required: [items, total, execution_mode]
+      required: [items, total, execution_mode, live_execution_enabled]
       properties:
         items:
           type: array
           items: { $ref: "#/components/schemas/PaperOrderIntent" }
         total: { type: integer }
-        execution_mode: { type: string, enum: [paper_only] }
+        execution_mode: { type: string, enum: [research_only, alert_only, paper_trading] }
+        live_execution_enabled: { type: boolean }
+
+    ExecutionBlockedResponse:
+      type: object
+      required: [error, execution_mode, blocked_reasons]
+      properties:
+        error: { type: string }
+        execution_mode: { type: string, enum: [research_only, alert_only, paper_trading] }
+        blocked_reasons:
+          type: array
+          items: { type: string }
 
     # ─── Research ─────────────────────────────────────────────────────────────
     ResearchScore:
@@ -1961,13 +2025,15 @@ components:
 
     FactorAnalysis:
       type: object
-      required: [factors]
+      required: [computed, status, reason, factors]
       properties:
+        computed: { type: boolean }
+        status: { type: string }
+        reason: { type: string }
         factors:
           type: array
           items:
             type: object
-            required: [factor_name, ic_mean, ic_stability]
             properties:
               factor_name: { type: string }
               ic_mean: { type: number }
@@ -2032,7 +2098,8 @@ components:
             reconciliation_alerts: { type: integer }
         system_mode:
           type: string
-          enum: [alert, paper, manual_broker, controlled_automation]
+          enum: [research_only, alert_only, paper_trading, manual_confirmation, semi_automatic, automatic]
+        configured_system_mode: { type: string }
         score_date: { type: string, format: date }
 
     Alert:

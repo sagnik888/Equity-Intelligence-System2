@@ -12,5 +12,7 @@ export interface GovernanceSettings {
   operatingMode: string;
   liveExecutionEnabled: boolean;
   killSwitchEnabled: boolean;
+  effectiveOperatingMode: string;
+  effectiveLiveExecutionEnabled: boolean;
   [key: string]: unknown;
  }

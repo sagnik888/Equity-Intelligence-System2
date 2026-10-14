@@ -55,15 +55,15 @@ router.get("/research/:isin", async (req, res): Promise<void> => {
     adjusted_research_score: r.adjustedResearchScore ? parseFloat(r.adjustedResearchScore) : 0,
     confidence: r.confidence ? parseFloat(r.confidence) : 0,
     components: [
-      { name: "Business Quality and Moat", weight: 15, score: r.businessQualityScore ? parseFloat(r.businessQualityScore) : null, notes: "" },
-      { name: "Industry Structure", weight: 10, score: r.industryStructureScore ? parseFloat(r.industryStructureScore) : null, notes: "" },
-      { name: "Financial Quality", weight: 15, score: r.financialQualityScore ? parseFloat(r.financialQualityScore) : null, notes: "" },
-      { name: "Capital Allocation", weight: 10, score: r.capitalAllocationScore ? parseFloat(r.capitalAllocationScore) : null, notes: "" },
-      { name: "Integrity and Governance", weight: 20, score: r.integrityGovernanceScore ? parseFloat(r.integrityGovernanceScore) : null, notes: "" },
-      { name: "Forecast Resilience", weight: 10, score: r.forecastResilienceScore ? parseFloat(r.forecastResilienceScore) : null, notes: "" },
-      { name: "Valuation and Margin of Safety", weight: 15, score: r.valuationScore ? parseFloat(r.valuationScore) : null, notes: "" },
-      { name: "Catalysts", weight: 3, score: r.catalystsScore ? parseFloat(r.catalystsScore) : null, notes: "" },
-      { name: "Technical Execution", weight: 2, score: r.technicalExecutionScore ? parseFloat(r.technicalExecutionScore) : null, notes: "" },
+      { name: "Business Quality and Moat", weight: 15, score: r.businessQualityScore ? parseFloat(r.businessQualityScore) : null },
+      { name: "Industry Structure", weight: 10, score: r.industryStructureScore ? parseFloat(r.industryStructureScore) : null },
+      { name: "Financial Quality", weight: 15, score: r.financialQualityScore ? parseFloat(r.financialQualityScore) : null },
+      { name: "Capital Allocation", weight: 10, score: r.capitalAllocationScore ? parseFloat(r.capitalAllocationScore) : null },
+      { name: "Integrity and Governance", weight: 20, score: r.integrityGovernanceScore ? parseFloat(r.integrityGovernanceScore) : null },
+      { name: "Forecast Resilience", weight: 10, score: r.forecastResilienceScore ? parseFloat(r.forecastResilienceScore) : null },
+      { name: "Valuation and Margin of Safety", weight: 15, score: r.valuationScore ? parseFloat(r.valuationScore) : null },
+      { name: "Catalysts", weight: 3, score: r.catalystsScore ? parseFloat(r.catalystsScore) : null },
+      { name: "Technical Execution", weight: 2, score: r.technicalExecutionScore ? parseFloat(r.technicalExecutionScore) : null },
     ],
     valuation: {
       method: r.valuationMethod ?? null,
@@ -75,7 +75,7 @@ router.get("/research/:isin", async (req, res): Promise<void> => {
       horizon_years: r.horizonYears ? parseFloat(r.horizonYears) : null,
       current_price: r.currentPrice ? parseFloat(r.currentPrice) : null,
     },
-    analyst_notes: r.analystNotes ?? "",
+    analyst_notes: r.analystNotes ?? undefined,
     score_date: r.scoreDate,
   });
 });

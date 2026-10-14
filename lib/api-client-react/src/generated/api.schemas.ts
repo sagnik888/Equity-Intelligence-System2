@@ -48,6 +48,13 @@ export type GovernanceStatusValidation = {
   execution: string;
 };
 
+export type GovernanceStatusEntrySafety = {
+  allow_new_entries: boolean;
+  resource_mode: string;
+  resource_health_review_required: boolean;
+  reason: string;
+};
+
 export type GovernanceStatusFoundations = {
   licensed_sources_registered: boolean;
   source_adapters_registered: boolean;
@@ -60,12 +67,16 @@ export type GovernanceStatusResources = { [key: string]: unknown } | null;
 
 export interface GovernanceStatus {
   system_mode: string;
+  configured_system_mode: string;
+  effective_execution_mode: string;
   deployment_profile: string;
   live_execution_enabled: boolean;
+  configured_live_execution_enabled: boolean;
   kill_switch_enabled: boolean;
   dataset_status: string;
   coverage: GovernanceStatusCoverage;
   validation: GovernanceStatusValidation;
+  entry_safety: GovernanceStatusEntrySafety;
   foundations: GovernanceStatusFoundations;
   resources?: GovernanceStatusResources;
   generated_at: string;
@@ -77,6 +88,8 @@ export interface GovernanceSettings {
   operatingMode: string;
   liveExecutionEnabled: boolean;
   killSwitchEnabled: boolean;
+  effectiveOperatingMode: string;
+  effectiveLiveExecutionEnabled: boolean;
   [key: string]: unknown;
  }
 
@@ -606,6 +619,28 @@ export const SignalState = {
   no_signal: 'no_signal',
 } as const;
 
+export type SignalLifecycleState = typeof SignalLifecycleState[keyof typeof SignalLifecycleState];
+
+
+export const SignalLifecycleState = {
+  not_eligible: 'not_eligible',
+  insufficient_data: 'insufficient_data',
+  preview_only: 'preview_only',
+  ready: 'ready',
+  entry_pending: 'entry_pending',
+  active: 'active',
+  exit_pending: 'exit_pending',
+  closed: 'closed',
+  cooldown: 'cooldown',
+} as const;
+
+/**
+ * @nullable
+ */
+export type SignalComponentBreakdown = { [key: string]: unknown } | null;
+
+export type SignalEligibilityChecks = {[key: string]: boolean};
+
 export interface Signal {
   isin: string;
   ticker: string;
@@ -614,6 +649,35 @@ export interface Signal {
   universe_group?: string;
   horizon: SignalHorizon;
   state: SignalState;
+  lifecycle_state: SignalLifecycleState;
+  /** @nullable */
+  previous_state?: string | null;
+  completed_bar: boolean;
+  source_sealed: boolean;
+  /** @nullable */
+  confirmed_at?: string | null;
+  /** @nullable */
+  valid_until?: string | null;
+  /** @nullable */
+  cooldown_until?: string | null;
+  /** @nullable */
+  next_session_eligible_at?: string | null;
+  /** @nullable */
+  regime?: string | null;
+  /** @nullable */
+  model_version?: string | null;
+  /** @nullable */
+  decision_version?: string | null;
+  /** @nullable */
+  source_snapshot_id?: string | null;
+  /** @nullable */
+  component_breakdown?: SignalComponentBreakdown;
+  /** @nullable */
+  eligibility_reason?: string | null;
+  actionable: boolean;
+  /** @nullable */
+  actionable_score?: number | null;
+  eligibility_checks?: SignalEligibilityChecks;
   hss: number;
   confidence: number;
   stale_penalty?: number;
@@ -738,6 +802,11 @@ export type PortfolioSummarySectorConcentrationItem = {
 };
 
 export interface PortfolioSummary {
+  operating_mode?: string;
+  configured_operating_mode?: string;
+  live_execution_enabled?: boolean;
+  configured_live_execution_enabled?: boolean;
+  kill_switch_enabled?: boolean;
   total_capital: number;
   invested_capital: number;
   cash?: number;
@@ -839,6 +908,10 @@ export interface PositionSizeInput {
   entry_price: number;
   stop_price: number;
   portfolio_capital: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
   risk_percent_per_unit?: number;
   allowed_participation_rate?: number;
   max_exit_days?: number;
@@ -847,7 +920,18 @@ export interface PositionSizeInput {
   estimated_roundtrip_cost_pct?: number;
 }
 
-export type PositionSizeResultBindingConstraint = typeof PositionSizeResultBindingConstraint[keyof typeof PositionSizeResultBindingConstraint];
+export type PositionSizeResultStatus = typeof PositionSizeResultStatus[keyof typeof PositionSizeResultStatus];
+
+
+export const PositionSizeResultStatus = {
+  preview_only: 'preview_only',
+  executable: 'executable',
+} as const;
+
+/**
+ * @nullable
+ */
+export type PositionSizeResultBindingConstraint = typeof PositionSizeResultBindingConstraint[keyof typeof PositionSizeResultBindingConstraint] | null;
 
 
 export const PositionSizeResultBindingConstraint = {
@@ -863,13 +947,26 @@ export interface PositionSizeResult {
   isin: string;
   ticker: string;
   name: string;
+  executable: boolean;
+  status: PositionSizeResultStatus;
+  blocked_reasons: string[];
   final_quantity: number;
-  quantity_by_risk?: number;
-  quantity_by_liquidity?: number;
-  quantity_by_company_cap?: number;
-  quantity_by_sector_cap?: number;
+  /** @nullable */
+  preview_quantity: number | null;
+  preview_method?: string;
+  /** @nullable */
+  quantity_by_risk?: number | null;
+  /** @nullable */
+  quantity_by_liquidity?: number | null;
+  /** @nullable */
+  quantity_by_company_cap?: number | null;
+  /** @nullable */
+  quantity_by_sector_cap?: number | null;
+  /** @nullable */
   binding_constraint: PositionSizeResultBindingConstraint;
   position_value?: number;
+  /** @nullable */
+  preview_position_value?: number | null;
   portfolio_weight_pct?: number;
   risk_amount?: number;
   /** @nullable */
@@ -962,13 +1059,31 @@ export type PaperOrderIntentListExecutionMode = typeof PaperOrderIntentListExecu
 
 
 export const PaperOrderIntentListExecutionMode = {
-  paper_only: 'paper_only',
+  research_only: 'research_only',
+  alert_only: 'alert_only',
+  paper_trading: 'paper_trading',
 } as const;
 
 export interface PaperOrderIntentList {
   items: PaperOrderIntent[];
   total: number;
   execution_mode: PaperOrderIntentListExecutionMode;
+  live_execution_enabled: boolean;
+}
+
+export type ExecutionBlockedResponseExecutionMode = typeof ExecutionBlockedResponseExecutionMode[keyof typeof ExecutionBlockedResponseExecutionMode];
+
+
+export const ExecutionBlockedResponseExecutionMode = {
+  research_only: 'research_only',
+  alert_only: 'alert_only',
+  paper_trading: 'paper_trading',
+} as const;
+
+export interface ExecutionBlockedResponse {
+  error: string;
+  execution_mode: ExecutionBlockedResponseExecutionMode;
+  blocked_reasons: string[];
 }
 
 export type ResearchScoreCoverageTier = typeof ResearchScoreCoverageTier[keyof typeof ResearchScoreCoverageTier];
@@ -1256,9 +1371,9 @@ export type FactorAnalysisFactorsItemCorrelationWithOthersItem = {
 };
 
 export type FactorAnalysisFactorsItem = {
-  factor_name: string;
-  ic_mean: number;
-  ic_stability: number;
+  factor_name?: string;
+  ic_mean?: number;
+  ic_stability?: number;
   /** @nullable */
   ic_ir?: number | null;
   /** @nullable */
@@ -1271,6 +1386,9 @@ export type FactorAnalysisFactorsItem = {
 };
 
 export interface FactorAnalysis {
+  computed: boolean;
+  status: string;
+  reason: string;
   factors: FactorAnalysisFactorsItem[];
 }
 
@@ -1314,10 +1432,12 @@ export type DashboardSummarySystemMode = typeof DashboardSummarySystemMode[keyof
 
 
 export const DashboardSummarySystemMode = {
-  alert: 'alert',
-  paper: 'paper',
-  manual_broker: 'manual_broker',
-  controlled_automation: 'controlled_automation',
+  research_only: 'research_only',
+  alert_only: 'alert_only',
+  paper_trading: 'paper_trading',
+  manual_confirmation: 'manual_confirmation',
+  semi_automatic: 'semi_automatic',
+  automatic: 'automatic',
 } as const;
 
 export interface DashboardSummary {
@@ -1327,6 +1447,7 @@ export interface DashboardSummary {
   top_candidates: CandidateScore[];
   data_quality: DashboardSummaryDataQuality;
   system_mode?: DashboardSummarySystemMode;
+  configured_system_mode?: string;
   score_date?: string;
 }
 

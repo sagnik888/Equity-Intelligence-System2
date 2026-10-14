@@ -17,6 +17,7 @@ import {
 } from "@workspace/db";
 import { count, desc, eq } from "drizzle-orm";
 import { FORMULA_REGISTRY, FORMULA_VERSION } from "../lib/formulas";
+import { evaluateDiskResourceState } from "../lib/safetyControls";
 
 const router: IRouter = Router();
 
@@ -46,15 +47,24 @@ router.get("/governance/status", async (_req, res): Promise<void> => {
   const actionCount = Number(actions[0]?.count ?? 0);
   const profile = settings[0];
   const target = 2000;
-  const architectureStatus = "validated";
-  const codeStatus = "validated";
-  const dataStatus = sourceCount > 0 && factCount > 0 ? "validated" : "demo_only";
+  const architectureStatus = "implemented_not_certified";
+  const codeStatus = "implemented_not_certified";
+  const dataStatus = "demo_only";
   const investmentStatus = "not_validated";
-  const executionStatus = profile?.liveExecutionEnabled ? "blocked_by_policy" : "paper_only";
+  const executionStatus = "blocked_by_policy";
+  const resourceState = evaluateDiskResourceState({
+    freeGb: latestResource[0]?.freeStorageGb == null ? null : Number(latestResource[0].freeStorageGb),
+    reserveGb: null,
+    hysteresisGb: null,
+    healthReviewComplete: false,
+  });
   res.json({
-    system_mode: profile?.operatingMode ?? "alert_only",
+    system_mode: "alert_only",
+    configured_system_mode: profile?.operatingMode ?? "alert_only",
+    effective_execution_mode: "alert_only",
     deployment_profile: profile?.profile ?? "personal_core",
-    live_execution_enabled: profile?.liveExecutionEnabled ?? false,
+    live_execution_enabled: false,
+    configured_live_execution_enabled: profile?.liveExecutionEnabled ?? false,
     kill_switch_enabled: profile?.killSwitchEnabled ?? false,
     dataset_status: "seeded_demo",
     coverage: { current: universeCount, target, coverage_pct: Math.min(100, (universeCount / target) * 100) },
@@ -62,9 +72,15 @@ router.get("/governance/status", async (_req, res): Promise<void> => {
       architecture: architectureStatus,
       data: dataStatus,
       code: codeStatus,
-      model: "formula_tests_passed",
+      model: "not_validated",
       investment: investmentStatus,
       execution: executionStatus,
+    },
+    entry_safety: {
+      allow_new_entries: false,
+      resource_mode: resourceState.mode,
+      resource_health_review_required: resourceState.requireHealthReview,
+      reason: "Disk reserve/hysteresis policy and reviewed live resource telemetry are not configured.",
     },
     foundations: {
       licensed_sources_registered: Number(licenses[0]?.count ?? 0) > 0,
@@ -80,12 +96,16 @@ router.get("/governance/status", async (_req, res): Promise<void> => {
 
 router.get("/governance/settings", async (_req, res): Promise<void> => {
   const [settings] = await db.select().from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1);
-  res.json(settings ?? {
+  res.json({
+    ...(settings ?? {
     id: 1,
     profile: "personal_core",
     operatingMode: "alert_only",
     liveExecutionEnabled: false,
     killSwitchEnabled: false,
+    }),
+    effectiveOperatingMode: "alert_only",
+    effectiveLiveExecutionEnabled: false,
   });
 });
 
