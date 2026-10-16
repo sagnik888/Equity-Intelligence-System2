@@ -18,6 +18,7 @@ import {
 import { count, desc, eq } from "drizzle-orm";
 import { FORMULA_REGISTRY, FORMULA_VERSION } from "../lib/formulas";
 import { evaluateDiskResourceState } from "../lib/safetyControls";
+import { evaluateQuantitativeReleaseReadiness } from "../lib/releaseReadiness";
 
 const router: IRouter = Router();
 
@@ -38,7 +39,7 @@ router.get("/governance/status", async (_req, res): Promise<void> => {
     db.select().from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1),
     db.select({ count: count() }).from(dataLicensesTable),
     db.select({ count: count() }).from(connectorAdaptersTable),
-    db.select({ count: count() }).from(acceptanceGatesTable),
+    db.select().from(acceptanceGatesTable),
     db.select().from(resourceSnapshotsTable).orderBy(desc(resourceSnapshotsTable.capturedAt)).limit(1),
   ]);
   const universeCount = Number(coverage[0]?.count ?? 0);
@@ -87,8 +88,9 @@ router.get("/governance/status", async (_req, res): Promise<void> => {
       source_adapters_registered: Number(connectors[0]?.count ?? 0) > 0,
       point_in_time_facts: factCount > 0,
       corporate_actions: actionCount > 0,
-      acceptance_gates_registered: Number(gates[0]?.count ?? 0) > 0,
+      acceptance_gates_registered: gates.length > 0,
     },
+    release_readiness: evaluateQuantitativeReleaseReadiness(gates),
     resources: latestResource[0] ?? null,
     generated_at: new Date().toISOString(),
   });

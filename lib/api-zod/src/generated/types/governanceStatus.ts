@@ -8,6 +8,7 @@
 import type { GovernanceStatusCoverage } from './governanceStatusCoverage';
 import type { GovernanceStatusEntrySafety } from './governanceStatusEntrySafety';
 import type { GovernanceStatusFoundations } from './governanceStatusFoundations';
+import type { GovernanceStatusReleaseReadiness } from './governanceStatusReleaseReadiness';
 import type { GovernanceStatusResources } from './governanceStatusResources';
 import type { GovernanceStatusValidation } from './governanceStatusValidation';
 
@@ -24,6 +25,7 @@ export interface GovernanceStatus {
   validation: GovernanceStatusValidation;
   entry_safety: GovernanceStatusEntrySafety;
   foundations: GovernanceStatusFoundations;
+  release_readiness: GovernanceStatusReleaseReadiness;
   resources?: GovernanceStatusResources;
   generated_at: Date;
 }

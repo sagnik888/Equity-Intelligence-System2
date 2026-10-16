@@ -2,6 +2,7 @@ import { ShieldCheck, Database, Cpu, Gauge, LockKeyhole, CircleAlert, type Lucid
 import {
   useGetGovernanceStatus,
   useGetGovernanceSettings,
+  useListFormulaRegistry,
   useListConnectorHealth,
   useListAcceptanceGates,
 } from "@workspace/api-client-react";
@@ -12,6 +13,8 @@ import { cn } from "@/lib/utils";
 
 function stateClass(value: string | undefined) {
   if (value === "validated" || value === "healthy" || value === "approved") return "text-emerald-400 border-emerald-500/30 bg-emerald-500/10";
+  if (value === "blocked_failed" || value === "failed" || value === "rejected") return "text-red-400 border-red-500/30 bg-red-500/10";
+  if (value === "blocked_unknown") return "text-amber-400 border-amber-500/30 bg-amber-500/10";
   if (value === "warning" || value === "demo_only" || value === "paper_only") return "text-amber-400 border-amber-500/30 bg-amber-500/10";
   return "text-muted-foreground border-border bg-muted/20";
 }
@@ -23,6 +26,7 @@ function StateBadge({ value }: { value?: string }) {
 export default function Governance() {
   const { data: status, isLoading } = useGetGovernanceStatus();
   const { data: settings } = useGetGovernanceSettings();
+  const { data: formulaRegistry } = useListFormulaRegistry();
   const { data: connectors } = useListConnectorHealth();
   const { data: gates } = useListAcceptanceGates();
 
@@ -31,6 +35,9 @@ export default function Governance() {
   const validation = status?.validation as Record<string, string> | undefined;
   const gateRows = (gates?.gates ?? []) as Array<Record<string, any>>;
   const adapterRows = (connectors?.adapters ?? []) as Array<Record<string, any>>;
+  const formulaRows = formulaRegistry?.formulas ?? [];
+  const referenceTestedCount = formulaRows.filter((formula) => formula.testStatus === "reference_tested").length;
+  const approvedFormulaCount = formulaRows.filter((formula) => formula.approvalStatus === "approved").length;
   const validationCards: Array<{ label: string; value?: string; Icon: LucideIcon }> = [
     { label: "Architecture", value: validation?.architecture, Icon: ShieldCheck },
     { label: "Data", value: validation?.data, Icon: Database },
@@ -80,7 +87,7 @@ export default function Governance() {
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="grid lg:grid-cols-3 gap-4">
         <Card className="border-border">
           <CardHeader className="pb-3"><CardTitle className="text-sm">Coverage and source readiness</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-xs">
@@ -92,10 +99,25 @@ export default function Governance() {
           </CardContent>
         </Card>
         <Card className="border-border">
+          <CardHeader className="pb-3"><CardTitle className="text-sm">Formula reference registry</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-xs">
+            <div className="flex justify-between"><span className="text-muted-foreground">Synthetic vectors</span><span className="font-mono">{referenceTestedCount} / {formulaRows.length || 26}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Registry version</span><span className="font-mono">{formulaRegistry?.registry_version ?? "loading"}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Investment approval</span><StateBadge value={approvedFormulaCount > 0 ? "approved" : "not_approved"} /></div>
+            <p className="text-amber-400">Offline reference tests only. No formula is approved for investment use.</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border">
           <CardHeader className="pb-3"><CardTitle className="text-sm">Execution boundary</CardTitle></CardHeader>
           <CardContent className="text-xs text-muted-foreground space-y-2">
             <p>Signals are research previews; paper and live order paths remain blocked until the required data, investment, resource, account, and execution gates pass.</p>
             <p>Missing source records, revisions, and corporate actions are surfaced as unavailable or pending review rather than replaced with fabricated values.</p>
+            <div className="flex items-center justify-between border-t border-border pt-3">
+              <span>Quantitative release evidence</span>
+              <StateBadge value={status?.release_readiness.status ?? "not_configured"} />
+            </div>
+            <p>{status?.release_readiness.passed_gate_count ?? 0} / {status?.release_readiness.required_gate_count ?? 10} areas complete; {status?.release_readiness.unknown_gate_count ?? 10} unknown; {status?.release_readiness.failed_gate_count ?? 0} failed.</p>
+            <p className="text-amber-400">Complete evidence permits independent review only; it never enables order execution.</p>
           </CardContent>
         </Card>
       </div>

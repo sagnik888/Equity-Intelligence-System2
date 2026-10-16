@@ -8,7 +8,7 @@ For the full current-state narrative and feature inventory, see [`ieis-system-su
 
 | Area | Current implementation | Remaining work |
 | --- | --- | --- |
-| Formula governance | Registry metadata and formula API exist; core formula helpers are tested in code | Add structured machine expressions, persisted registry/version approvals, export validation, and complete edge-case test coverage |
+| Formula governance | Exact 26-ID allowlist; direct callable reference dispatcher; deterministic synthetic vector per formula; missing-argument rejection; no eval; all entries unapproved | Add independent financial/unit/PIT/property validation, export/hash checks, approval workflow, and formula-version linkage to computed outputs |
 | Validation boundary | Governance status separates demo data, investment, and effective execution states; resource gate fails closed without telemetry/policy | Add architecture/code/resource/security gate records, gate history, and quantitative evidence |
 | Coverage model | Demo seed is labeled; coverage target is exposed | Add discovery/standard/deep coverage tiers and imports/connectors; no live 2,000-security dataset is present |
 | Source rights | Basic source foundation exists | Add license registry, connector contract, request health, raw immutable records, retention checks, and permitted-use blocking |
@@ -19,7 +19,7 @@ For the full current-state narrative and feature inventory, see [`ieis-system-su
 | Corporate actions | Basic action table exists | Add complete action types, adjustment factors, share-count history, validation, and canonical price-series handling |
 | Feature store | Scores contain some breakdown JSON | Add versioned feature definitions/values, publication lag, staleness, outlier, negative-base, and cache controls |
 | Scoring | Candidate score and confidence shrinkage exist | Correct weight alignment, percentile normalization, sector routing, sector-specific facts/models, and missing-data safety |
-| Signals | Five horizons, score bands, lifecycle/provenance fields, and non-actionable preview labeling exist | Add completed-bar construction, durable lifecycle transitions, hysteresis, expiry, cooldown, confirmation timing, regime/catalyst inputs, and cross-horizon policy |
+| Signals | Five horizons, score bands, lifecycle/provenance fields, non-actionable preview labeling, and a read-only fail-closed transition engine exist | Connect to licensed sealed inputs; persist append-only transitions; add regime/catalyst/next-session evidence and cross-horizon policy |
 | Research/evidence | Research scores and evidence ledger exist | Add full evidence taxonomy, affected forecast/valuation fields, management guidance, research promotion, forecast/scenario/valuation workflows |
 | Portfolio | Demo positions, suitability inputs, fail-closed size preview, and blocked order-intent API exist; order-control storage scaffolding is present | Add full policy-sourced residual caps, position intent, costs/distributions/tax lots, accepted paper lifecycle, fills, reconciliation, failover, and broker classification |
 | Backtesting | Seeded results and rich metric columns exist | Replace fabricated factor data with reproducible PIT walk-forward runs, costs/liquidity/survivorship controls, and validation status |
@@ -29,7 +29,7 @@ For the full current-state narrative and feature inventory, see [`ieis-system-su
 | Backup/recovery | No application-owned backup/restore evidence | Add backup configuration/status, restore-test records, retention metadata, and release gate |
 | Model governance | Formula version is exposed | Add champion/challenger/experimental registry, approvals, shadow comparisons, deployments, and rollback |
 | API/versioning | OpenAPI source and generated clients exist | Add versioned `/api/v1` surface or document compatibility bridge and add missing endpoints/contracts |
-| Testing/release gates | Typecheck/build/smoke tests pass | Add formula/data/broker/resource/adversarial tests and persisted acceptance-gate results |
+| Testing/release gates | Formula and safety reference tests run; quantitative release evaluator is fail-closed and visible in Governance | Add reviewed thresholds and signed/reproducible evidence, then independent release review; no defaults or thresholds are assumed |
 
 ## Ordered implementation sequence
 
@@ -62,6 +62,8 @@ The following correctness and safety gaps were fixed after comparing the running
 - Execution-policy, risk-policy, reservation, outbox, broker-attempt/fill, and virtual-lot schema scaffolding added; no broker adapter, cryptographic signer/verifier, outbox worker, or reconciliation flow is active.
 - API governance exposes effective execution as disabled and entry safety as blocked when telemetry/policy review is unavailable.
 - Demo model/gate/alert records no longer claim a production-approved champion or a fully operational trading system; the current rows were corrected in place without resetting the database.
+- The 26 formula IDs in the 7.1.4 allowlist now have direct offline reference dispatch and synthetic vectors; arbitrary expression text is never evaluated, and every formula remains not approved.
+- Quantitative release readiness now requires evidence for ten areas, treats absent/invalid evidence as unknown, and reports review readiness only; it cannot enable execution.
 
 ## 7.1.4 delta checklist
 
@@ -74,11 +76,11 @@ The following correctness and safety gaps were fixed after comparing the running
 | N05 resource emergency/recovery | Partial, currently blocks entries | Missing telemetry, reserve/hysteresis policy, or health review cannot reach normal state. Host metrics and recovery review are not wired. |
 | N06 candle seal | Helper only | Seal predicates and tests exist; no licensed bar, watermark, calendar, checksum, or conflict pipeline. |
 | N07 CAS/session phase | Classifier only | Boundary classifier exists; no authoritative calendar/membership or broker rule input. It is not execution permission. |
-| N08 action eligibility | Partial, all current signals blocked | Eligibility helpers and API output exist; no licensed source, sealed data, gate linkage, approved strategy, or configured thresholds. |
+| N08 action eligibility | Reference lifecycle engine present; all current signals blocked | Exact gate/approval/confidence checks, confirmation, expiry/cooldown/hysteresis and paper position events are tested. Runtime uses preview/unavailable mapping only; licensed input, full gate linkage, durable transition audit, and governed thresholds are absent. |
 | N09 business-action idempotency | Helper/schema only | Stable hash and unique keys exist; no atomic reservation/outbox/dispatch/reconciliation transaction. |
 | N10 account risk policy | Partial | Default 1% removed; no verified policy. Sizing result remains preview-only and final quantity zero. |
-| N11 formula whitelist and vectors | Incomplete | Existing registry/helpers are not yet reconciled against all 26 expressions and their vectors; no production formula approval. |
-| N12 quantitative release gates | Incomplete | Status separation exists; reproducible quantitative evidence and fail-closed release review are not complete. |
+| N11 formula whitelist and vectors | Reference tested, not approved | Exact 26 IDs, 26 deterministic synthetic vectors, and missing-required-argument tests are present. Independent finance, units, PIT, property tests, and approval linkage remain. |
+| N12 quantitative release gates | Fail-closed evaluator present; evidence absent | Ten release areas require explicit numeric thresholds, measurements, units, periods, entitled sources, reviewer identity, and test artifacts. Unknown or duplicate evidence blocks review; no release threshold is invented, and execution remains disabled. |
 
 The complete requirement-level description and current feature inventory are in [`ieis-system-summary-7.1.4.md`](./ieis-system-summary-7.1.4.md). Database schema additions must be pushed and verified before those tables are considered installed in the active database.
 
@@ -96,9 +98,9 @@ The complete requirement-level description and current feature inventory are in 
 ### B. Models and research
 
 7. Replace scoring defaults/proxies with persisted feature inputs and source-backed calculations; add sector-specific models and cross-sectional normalization.
-8. Add formula/feature/model approval and deployment linkage to every computed score, signal, research record, and backtest.
+8. Add independently reviewed formula/feature/model approvals and deployment linkage to every computed score, signal, research record, and backtest.
 9. Complete hard-gate review/resolution workflow with evidence, audit events, caps, blocks, and score/signal consequences.
-10. Implement completed-bar technical aggregation and the full signal lifecycle: `NOT_ELIGIBLE`, `INSUFFICIENT_DATA`, `READY`, `ENTRY_PENDING`, `ACTIVE`, `EXIT_PENDING`, `CLOSED`, `COOLDOWN`, expiry, hysteresis, regime, catalyst, and next-session timing.
+10. Connect the tested signal lifecycle to approved inputs and durable transition history; implement completed-bar technical aggregation plus regime, catalyst, cross-horizon, and next-session policy.
 11. Add evidence taxonomy, management guidance, forecasts, scenarios, reverse valuation, sensitivity, catalyst tracking, and research promotion/review.
 
 ### C. Portfolio and execution safety

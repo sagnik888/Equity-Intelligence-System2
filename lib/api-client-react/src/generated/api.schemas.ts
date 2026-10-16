@@ -63,6 +63,45 @@ export type GovernanceStatusFoundations = {
   acceptance_gates_registered: boolean;
 };
 
+export type GovernanceStatusReleaseReadinessStatus = typeof GovernanceStatusReleaseReadinessStatus[keyof typeof GovernanceStatusReleaseReadinessStatus];
+
+
+export const GovernanceStatusReleaseReadinessStatus = {
+  ready_for_review: 'ready_for_review',
+  blocked_failed: 'blocked_failed',
+  blocked_unknown: 'blocked_unknown',
+} as const;
+
+export type GovernanceStatusReleaseReadinessGatesItemStatus = typeof GovernanceStatusReleaseReadinessGatesItemStatus[keyof typeof GovernanceStatusReleaseReadinessGatesItemStatus];
+
+
+export const GovernanceStatusReleaseReadinessGatesItemStatus = {
+  passed: 'passed',
+  failed: 'failed',
+  unknown: 'unknown',
+} as const;
+
+export type GovernanceStatusReleaseReadinessGatesItem = {
+  gateKey: string;
+  gateName: string;
+  status: GovernanceStatusReleaseReadinessGatesItemStatus;
+  passedCriteria: number;
+  totalCriteria: number;
+  issues: string[];
+};
+
+export type GovernanceStatusReleaseReadiness = {
+  status: GovernanceStatusReleaseReadinessStatus;
+  release_review_ready: boolean;
+  execution_enabled: false;
+  required_gate_count: number;
+  passed_gate_count: number;
+  failed_gate_count: number;
+  unknown_gate_count: number;
+  gates: GovernanceStatusReleaseReadinessGatesItem[];
+  note: string;
+};
+
 export type GovernanceStatusResources = { [key: string]: unknown } | null;
 
 export interface GovernanceStatus {
@@ -78,6 +117,7 @@ export interface GovernanceStatus {
   validation: GovernanceStatusValidation;
   entry_safety: GovernanceStatusEntrySafety;
   foundations: GovernanceStatusFoundations;
+  release_readiness: GovernanceStatusReleaseReadiness;
   resources?: GovernanceStatusResources;
   generated_at: string;
 }

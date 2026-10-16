@@ -947,7 +947,7 @@ components:
 
     GovernanceStatus:
       type: object
-      required: [system_mode, configured_system_mode, effective_execution_mode, deployment_profile, live_execution_enabled, configured_live_execution_enabled, kill_switch_enabled, dataset_status, coverage, validation, entry_safety, foundations, generated_at]
+      required: [system_mode, configured_system_mode, effective_execution_mode, deployment_profile, live_execution_enabled, configured_live_execution_enabled, kill_switch_enabled, dataset_status, coverage, validation, entry_safety, foundations, release_readiness, generated_at]
       properties:
         system_mode: { type: string }
         configured_system_mode: { type: string }
@@ -991,6 +991,32 @@ components:
             point_in_time_facts: { type: boolean }
             corporate_actions: { type: boolean }
             acceptance_gates_registered: { type: boolean }
+        release_readiness:
+          type: object
+          required: [status, release_review_ready, execution_enabled, required_gate_count, passed_gate_count, failed_gate_count, unknown_gate_count, gates, note]
+          properties:
+            status: { type: string, enum: [ready_for_review, blocked_failed, blocked_unknown] }
+            release_review_ready: { type: boolean }
+            execution_enabled: { type: boolean, enum: [false] }
+            required_gate_count: { type: integer }
+            passed_gate_count: { type: integer }
+            failed_gate_count: { type: integer }
+            unknown_gate_count: { type: integer }
+            gates:
+              type: array
+              items:
+                type: object
+                required: [gateKey, gateName, status, passedCriteria, totalCriteria, issues]
+                properties:
+                  gateKey: { type: string }
+                  gateName: { type: string }
+                  status: { type: string, enum: [passed, failed, unknown] }
+                  passedCriteria: { type: integer }
+                  totalCriteria: { type: integer }
+                  issues:
+                    type: array
+                    items: { type: string }
+            note: { type: string }
         resources:
           nullable: true
           type: object

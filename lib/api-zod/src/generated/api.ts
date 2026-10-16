@@ -1489,6 +1489,24 @@ export const GetGovernanceStatusResponse = zod.object({
   "corporate_actions": zod.boolean(),
   "acceptance_gates_registered": zod.boolean()
 }),
+  "release_readiness": zod.object({
+  "status": zod.enum(['ready_for_review', 'blocked_failed', 'blocked_unknown']),
+  "release_review_ready": zod.boolean(),
+  "execution_enabled": zod.literal(false),
+  "required_gate_count": zod.number(),
+  "passed_gate_count": zod.number(),
+  "failed_gate_count": zod.number(),
+  "unknown_gate_count": zod.number(),
+  "gates": zod.array(zod.object({
+  "gateKey": zod.string(),
+  "gateName": zod.string(),
+  "status": zod.enum(['passed', 'failed', 'unknown']),
+  "passedCriteria": zod.number(),
+  "totalCriteria": zod.number(),
+  "issues": zod.array(zod.string())
+})),
+  "note": zod.string()
+}),
   "resources": zod.record(zod.string(), zod.unknown()).nullish(),
   "generated_at": zod.coerce.date()
 })

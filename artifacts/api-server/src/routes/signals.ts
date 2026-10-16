@@ -7,14 +7,36 @@ import {
   GetTopBuySignalsQueryParams,
 } from "@workspace/api-zod";
 import { actionableScoreV3, checkTradeSignalEligibility } from "../lib/safetyControls";
+import { advanceSignalLifecycle } from "../lib/signalLifecycle";
 
 const router: IRouter = Router();
 
 function mapSignal(s: typeof signalsTable.$inferSelect) {
   const previewOnlySeed = !s.sourceSnapshotId && !s.sourceSealed && !s.completedBar;
-  const lifecycleState = previewOnlySeed && s.lifecycleState === "insufficient_data"
-    ? "preview_only"
-    : s.lifecycleState;
+  const lifecycle = advanceSignalLifecycle({
+    currentState: s.lifecycleState,
+    event: "refresh",
+    sourceStatus: previewOnlySeed ? "demo" : "unknown",
+    completedBar: s.completedBar,
+    sealedData: s.sourceSealed,
+    dataComplete: false,
+    noLevel1Gate: false,
+    approvedStrategy: false,
+    confidenceThresholdConfigured: false,
+    confidenceMet: false,
+    hysteresisMet: false,
+    paperTradingAccepted: false,
+    positionConfirmed: false,
+    exitConditionMet: false,
+    positionClosed: false,
+    confirmationCount: 0,
+    requiredConfirmations: 1,
+    now: new Date().toISOString(),
+    validUntil: s.validUntil?.toISOString() ?? null,
+    cooldownUntil: s.cooldownUntil?.toISOString() ?? null,
+    effectiveExecutionMode: "alert_only",
+    intentId: null,
+  });
   const signalConfidence = s.confidence ? parseFloat(s.confidence) : 0;
   const readiness = checkTradeSignalEligibility({
     licensedSource: false,
@@ -40,7 +62,7 @@ function mapSignal(s: typeof signalsTable.$inferSelect) {
     universe_group: s.universeGroup,
     horizon: s.horizon,
     state: s.state,
-    lifecycle_state: lifecycleState,
+    lifecycle_state: lifecycle.state,
     previous_state: s.previousState,
     completed_bar: s.completedBar,
     source_sealed: s.sourceSealed,
@@ -54,7 +76,7 @@ function mapSignal(s: typeof signalsTable.$inferSelect) {
     source_snapshot_id: s.sourceSnapshotId,
     component_breakdown: s.componentBreakdown,
     eligibility_reason: s.eligibilityReason
-      ?? (previewOnlySeed ? "Seeded demonstration data; no licensed sealed market-data source or approved strategy." : null),
+      ?? lifecycle.reason,
     actionable: readiness.eligible,
     actionable_score: actionableScore,
     eligibility_checks: readiness.checks,
